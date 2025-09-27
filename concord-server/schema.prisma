@@ -76,16 +76,16 @@ model Message {
   userId      String
   deleted     Boolean
   text        String
-  replies     Reply[]       @relation("MessageToReply")
-  repliedTo   Reply[]       @relation("ReplyToMessage")
+  replies     Reply?        @relation("MessageToReply")
+  repliedTo   Reply?        @relation("ReplyToMessage")
   MessagePing MessagePing[]
 }
 
 model Reply {
   message     Message @relation("MessageToReply", fields: [messageId], references: [id])
-  messageId   String
+  messageId   String  @unique
   repliesTo   Message @relation("ReplyToMessage", fields: [repliesToId], references: [id])
-  repliesToId String
+  repliesToId String  @unique
 
   @@unique([messageId, repliesToId])
 }
