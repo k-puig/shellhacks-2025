@@ -42,7 +42,7 @@ app.use('*', cors({
     allowHeaders: ['Content-Type', 'Authorization'],
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true
-})
+}))
 
 app.route('/api', routes)
 
