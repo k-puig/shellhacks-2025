@@ -42,12 +42,9 @@ app.use('*', cors({
     allowHeaders: ['Content-Type', 'Authorization'],
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true
-}))
-app.use(routes)
+})
+
+app.route('/api', routes)
 
 
-
-
-
-
-export default app
+export default app;
