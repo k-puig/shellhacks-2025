@@ -12,11 +12,13 @@ datasource db {
 }
 
 model Instance {
-  id       String     @id @default(uuid(7))
-  name     String
-  icon     String?
-  Role     Role[]
-  Category Category[]
+  id        String     @id @default(uuid(7))
+  name      String
+  icon      String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  Role      Role[]
+  Category  Category[]
 }
 
 model User {
@@ -28,6 +30,8 @@ model User {
   banner      String?
   admin       Boolean
   status      String // online/offline/dnd/idle/invis
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   Role        Role[]
   UserAuth    UserAuth?
   Message     Message[]
@@ -35,20 +39,24 @@ model User {
 }
 
 model Role {
-  User        User     @relation(fields: [userId], references: [id])
-  userId      String
-  Instance    Instance @relation(fields: [instanceId], references: [id])
-  instanceId  String
-  type        String
+  User       User     @relation(fields: [userId], references: [id])
+  userId     String
+  Instance   Instance @relation(fields: [instanceId], references: [id])
+  instanceId String
+  type       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@unique([userId, instanceId])
 }
 
 model UserAuth {
-  User     User    @relation(fields: [userId], references: [id])
-  userId   String
-  password String // HASHED PASSWORD AS STRING USING SHA-256
-  token    String? // current user token
+  User      User     @relation(fields: [userId], references: [id])
+  userId    String
+  password  String // HASHED PASSWORD AS STRING USING SHA-256
+  token     String? // current user token
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId])
 }
@@ -59,17 +67,34 @@ model Category {
   instanceId String?
   name       String
   position   Int
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   Channel    Channel[]
 }
 
 model Channel {
-  id          String    @id @default(uuid(7))
+  id          String      @id @default(uuid(7))
   type        String
-  Category    Category? @relation(fields: [categoryId], references: [id])
+  Category    Category?   @relation(fields: [categoryId], references: [id])
   categoryId  String?
   name        String
   description String
+  pinnedId    String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
   Message     Message[]
+  ChannelPin  ChannelPin?
+}
+
+model ChannelPin {
+  messageId String @unique
+  channelId String @unique
+
+  Message   Message  @relation(fields: [messageId], references: [id])
+  Channel   Channel  @relation(fields: [channelId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([messageId, channelId])
 }
 
 model Message {
@@ -80,25 +105,31 @@ model Message {
   userId      String
   deleted     Boolean
   text        String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   replies     Reply?        @relation("MessageToReply")
   repliedTo   Reply?        @relation("ReplyToMessage")
   MessagePing MessagePing[]
+  ChannelPin  ChannelPin?
 }
 
 model Reply {
-  message     Message @relation("MessageToReply", fields: [messageId], references: [id]) //message text 
-  messageId   String  @unique //message id of the reply
-  repliesTo   Message @relation("ReplyToMessage", fields: [repliesToId], references: [id]) //message id that this message replies to
-  repliesToId String  @unique //replies to this message id
+  message     Message  @relation("MessageToReply", fields: [messageId], references: [id]) //message text 
+  messageId   String   @unique //message id of the reply
+  repliesTo   Message  @relation("ReplyToMessage", fields: [repliesToId], references: [id]) //message id that this message replies to
+  repliesToId String   @unique //replies to this message id
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@unique([messageId, repliesToId])
 }
 
 model MessagePing {
-  Message     Message @relation(fields: [messageId], references: [id])
+  Message     Message  @relation(fields: [messageId], references: [id])
   messageId   String
-  PingsUser   User    @relation(fields: [pingsUserId], references: [id])
+  PingsUser   User     @relation(fields: [pingsUserId], references: [id])
   pingsUserId String
+  createdAt   DateTime @default(now())
 
   @@unique([messageId, pingsUserId])
 }
