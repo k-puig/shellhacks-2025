@@ -10,6 +10,10 @@ import { CreateUserInput } from '../validators/userValidator';
 const prisma = new PrismaClient();
 
 export async function createUser(data: CreateUserInput) {
+  if (await prisma.user.count({ where: { username: data.username }}) >= 1) {
+    return null;
+  }
+
   return await prisma.user.create({
     data: {
       username: data.username,
@@ -111,9 +115,13 @@ export async function getAllUsersFrom(instanceId: string): Promise<
   | null
 > {
   try {
-    const instances = await prisma.instance.findMany();
-    if (!instances) {
-      throw new Error("could not get all instances");
+    const instances = await prisma.instance.count({
+      where: {
+        id: instanceId
+      }
+    })
+    if (instances < 1) {
+      throw new Error("could not find given instance id");
     }
 
     const users = await prisma.user.findMany({
