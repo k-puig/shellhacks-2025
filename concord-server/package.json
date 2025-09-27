@@ -4,6 +4,7 @@
     "dev": "bun run --hot src/index.ts"
   },
   "dependencies": {
+    "@hono/zod-validator": "^0.7.3",
     "@prisma/client": "^6.16.2",
     "@socket.io/bun-engine": "^0.0.3",
     "hono": "^4.9.9",
@@ -11,6 +12,7 @@
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "prisma-zod-generator": "^1.22.1"
   }
 }

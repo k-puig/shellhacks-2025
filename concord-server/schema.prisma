@@ -1,22 +1,10 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-zod-generator"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-model Hello {
-  id    String  @id @default(uuid(7))
-  names Thing[]
-}
-
-model Thing {
-  id      BigInt  @id @default(autoincrement())
-  txt     String
-  Hello   Hello?  @relation(fields: [helloId], references: [id])
-  helloId String?
 }
 
 model Instance {

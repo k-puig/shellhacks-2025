@@ -1,4 +1,6 @@
-import { Message, MessagePing, Role, UserAuth } from "@prisma/client";
+import { Message, MessagePing, PrismaClient, Role, UserAuth } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export async function getUserChannels(userId: string): Promise<string[] | null> {
     try{
@@ -28,36 +30,46 @@ export async function getUserInformation(userId: string):
  Promise<{
     id: string, 
     userName: string,
-    nickName?: string,
-    bio?: string,
-    picture?: string,
-    banner?: string,
+    nickName: string | null,
+    bio: string | null,
+    picture: string | null,
+    banner: string | null,
     admin: boolean,
     status: 'online' | 'offline' | 'dnd' | 'idle' | 'invis',
     role: Role[],
     userAuth?: UserAuth,
-    messages: Message[],
-    MessagePing: MessagePing[]
 } | null> {
     try{
         if(!userId){
             throw new Error('missing userId');
         }
-        //TODO: add some prisma code here
-        //to fetch user information
+        
+        const user = await prisma.user.findUnique({
+            where: {
+                id: userId
+            }
+        })
+
+        if (!user) {
+            throw new Error('could not find user');
+        }
+
+        const userRoles = await prisma.role.findMany({
+            where: {
+                userId: userId
+            }
+        })
 
         return {
             id: userId,
-            userName: "Test User",
-            bio: "this is a bio",
-            picture: "https://www.goodhousekeeping.com/life/pets/g61070837/cutest-cat-breeds/",
-            banner: "https://www.goodhousekeeping.com/life/pets/g61070837/cutest-cat-breeds/",
-            admin: false,
-            status: "offline",
-            role: [],
-            userAuth: undefined,
-            messages: [],
-            MessagePing: []
+            userName: user.username,
+            nickName: user.nickname,
+            bio: user.bio,
+            picture: user.picture,
+            banner: user.banner,
+            admin: user.admin,
+            status: (["online", "offline", "dnd", "idle", "invis"] as const).includes(user.status as any) ? user.status as 'online' | 'offline' | 'dnd' | 'idle' | 'invis' : 'offline',
+            role: userRoles,
         };
 
     }catch(err){
@@ -65,6 +77,11 @@ export async function getUserInformation(userId: string):
 
         if(errMessage.message === 'missing userId'){
             console.log('services::actions::getUserInformation - missing userId');
+            return null;
+        }
+
+        if(errMessage.message === 'could not find user'){
+            console.log('services::actions::getUserInformation - unable to find user');
             return null;
         }
 
