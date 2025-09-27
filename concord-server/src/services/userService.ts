@@ -5,8 +5,23 @@ import {
   Role,
   UserAuth,
 } from "@prisma/client";
+import { CreateUserInput } from '../validators/userValidator';
 
 const prisma = new PrismaClient();
+
+export async function createUser(data: CreateUserInput) {
+  return await prisma.user.create({
+    data: {
+      username: data.username,
+      nickname: data.nickname,
+      bio: data.bio,
+      picture: data.picture,
+      banner: data.banner,
+      status: data.status,
+      admin: data.admin,
+    },
+  });
+}
 
 export async function getUserInformation(userId: string): Promise<{
   id: string;

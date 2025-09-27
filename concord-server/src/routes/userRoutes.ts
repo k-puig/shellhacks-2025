@@ -1,5 +1,7 @@
 import { Hono } from "hono";
-import { fetchAllUsers, fetchUserData } from "../controller/userController";
+import { fetchAllUsers, fetchUserData, createNewUser } from "../controller/userController";
+import { createUserSchema } from "../validators/userValidator";
+import { zValidator } from "@hono/zod-validator";
 const actions = new Hono();
 
 actions.get("user/:id", async (c) => {
@@ -25,5 +27,19 @@ actions.get("user", async (c) => {
     return c.json({ error: "Error getting all users from instance" }, 500);
   }
 });
+
+actions.post(
+  "user",
+  zValidator('json', createUserSchema),
+  async (c) => {
+    try {
+      const data = await c.req.json();
+      const newUser = await createNewUser(data);
+      return c.json(newUser, 201);
+    } catch (error) {
+      return c.json({ error: "Error creating user" }, 500);
+    }
+  }
+);
 
 export default actions;
