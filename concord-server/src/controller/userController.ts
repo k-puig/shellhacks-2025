@@ -1,4 +1,8 @@
-import { getAllUsersFrom, getUserInformation, createUser } from "../services/userService";
+import {
+  getAllUsersFrom,
+  getUserInformation,
+  createUser,
+} from "../services/userService";
 import { CreateUserInput } from "../validators/userValidator";
 
 export async function fetchUserData(id: string) {

@@ -53,21 +53,19 @@ app.use(
 app.route("/api", routes);
 
 app.get(
-  '/openapi',
+  "/openapi",
   openAPIRouteHandler(app, {
     documentation: {
       info: {
-        title: 'Hono API',
-        version: '1.0.0',
-        description: 'Greeting API',
+        title: "Hono API",
+        version: "1.0.0",
+        description: "Greeting API",
       },
-      servers: [
-        { url: 'http://localhost:3000', description: 'Local Server' },
-      ],
+      servers: [{ url: "http://localhost:3000", description: "Local Server" }],
     },
-  })
-)
+  }),
+);
 
-app.get('/scalar', Scalar({ url: '/openapi' }))
+app.get("/scalar", Scalar({ url: "/openapi" }));
 
 export default app;

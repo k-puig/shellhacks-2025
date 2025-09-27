@@ -1,29 +1,38 @@
 import { Hono } from "hono";
-import { fetchAllUsers, fetchUserData, createNewUser } from "../controller/userController";
-import { createUserSchema, queryAllUsersByInstanceId, queryUserByIdSchema } from "../validators/userValidator";
+import {
+  fetchAllUsers,
+  fetchUserData,
+  createNewUser,
+} from "../controller/userController";
+import {
+  createUserSchema,
+  queryAllUsersByInstanceId,
+  queryUserByIdSchema,
+} from "../validators/userValidator";
 import { zValidator } from "@hono/zod-validator";
 import { describeRoute, resolver } from "hono-openapi";
 const actions = new Hono();
 
-actions.get("user/:id", 
+actions.get(
+  "user/:id",
   describeRoute({
     description: "Get user by id",
     responses: {
       200: {
         description: "Success getting user",
         content: {
-          "application/json": { schema: resolver(queryUserByIdSchema) }
-        }
+          "application/json": { schema: resolver(queryUserByIdSchema) },
+        },
       },
       404: {
         description: "User id not found",
         content: {
-          "application/json": { schema: resolver(queryUserByIdSchema) }
-        }
-      }
-    }
+          "application/json": { schema: resolver(queryUserByIdSchema) },
+        },
+      },
+    },
   }),
-  zValidator('param', queryUserByIdSchema),
+  zValidator("param", queryUserByIdSchema),
   async (c) => {
     const id = c.req.param("id");
     const userData = await fetchUserData(id);
@@ -32,22 +41,23 @@ actions.get("user/:id",
     } else {
       return c.json({ error: "User not found" }, 404);
     }
-  }
+  },
 );
 
-actions.get("user",
+actions.get(
+  "user",
   describeRoute({
     description: "Get all users by instance id",
     responses: {
       200: {
         description: "Success getting all users in instance",
         content: {
-          "application/json": { schema: resolver(queryAllUsersByInstanceId) }
-        }
-      }
-    }
+          "application/json": { schema: resolver(queryAllUsersByInstanceId) },
+        },
+      },
+    },
   }),
-  zValidator('query', queryAllUsersByInstanceId),
+  zValidator("query", queryAllUsersByInstanceId),
   async (c) => {
     const instanceId = c.req.query("instanceId");
     if (!instanceId) {
@@ -60,7 +70,7 @@ actions.get("user",
     } else {
       return c.json({ error: "Error getting all users from instance" }, 500);
     }
-  }
+  },
 );
 
 actions.post(
@@ -71,18 +81,18 @@ actions.post(
       201: {
         description: "Success",
         content: {
-          'application/json': { schema: resolver(createUserSchema) },
+          "application/json": { schema: resolver(createUserSchema) },
         },
       },
       400: {
         description: "Bad request (user exists)",
         content: {
-          'application/json': { schema: resolver(createUserSchema) }
-        }
-      }
-    }
+          "application/json": { schema: resolver(createUserSchema) },
+        },
+      },
+    },
   }),
-  zValidator('json', createUserSchema),
+  zValidator("json", createUserSchema),
   async (c) => {
     try {
       const data = await c.req.json();
@@ -94,7 +104,7 @@ actions.post(
     } catch (error) {
       return c.json({ error: "Error creating user" }, 500);
     }
-  }
+  },
 );
 
 export default actions;
