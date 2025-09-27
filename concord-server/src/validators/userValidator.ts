@@ -18,4 +18,6 @@ export const createUserSchema = z.object({
   admin: z.boolean().default(false),
 })
 
+export type QueryUserByIdInput = z.infer<typeof queryUserByIdSchema>
+export type QueryAllUsersByInstanceIdInput = z.infer<typeof queryAllUsersByInstanceId>
 export type CreateUserInput = z.infer<typeof createUserSchema>

@@ -56,7 +56,6 @@ model Category {
   name       String
   position   Int
   Channel    Channel[]
-  Message    Message[]
 }
 
 model Channel {
@@ -71,12 +70,10 @@ model Channel {
 
 model Message {
   id          String        @id @default(uuid(7))
-  Channel     Channel?      @relation(fields: [channelId], references: [id])
-  channelId   String?
-  Category    Category?     @relation(fields: [categoryId], references: [id])
-  categoryId  String?
-  User        User?         @relation(fields: [userId], references: [id])
-  userId      String?
+  Channel     Channel       @relation(fields: [channelId], references: [id])
+  channelId   String
+  User        User          @relation(fields: [userId], references: [id])
+  userId      String
   deleted     Boolean
   text        String
   replies     Reply[]       @relation("MessageToReply")
