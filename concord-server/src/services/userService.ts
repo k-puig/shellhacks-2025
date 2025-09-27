@@ -6,15 +6,34 @@ import {
   UserAuth,
 } from "@prisma/client";
 import { CreateUserInput } from '../validators/userValidator';
+import shaHash from "../helper/hashing";
 
 const prisma = new PrismaClient();
 
-export async function createUser(data: CreateUserInput) {
+export async function createUser(data: CreateUserInput): Promise<{
+  username: string,
+  nickname: string | null,
+  bio: string | null,
+  picture: string | null,
+  banner: string | null,
+  status: string,
+  admin: boolean
+} | null> {
+  const requestingUser = await getUserInformation(data.requestingUserId);
+  const requestingUserCredentials = await getUserCredentials(data.requestingUserId)
+  if (!requestingUser
+    || !requestingUserCredentials 
+    || !requestingUser.admin
+    || requestingUserCredentials.token == null 
+    || data.requestingUserToken != requestingUserCredentials.token) {
+    return null;
+  }
+
   if (await prisma.user.count({ where: { username: data.username }}) >= 1) {
     return null;
   }
 
-  return await prisma.user.create({
+  const userData = await prisma.user.create({
     data: {
       username: data.username,
       nickname: data.nickname,
@@ -25,7 +44,67 @@ export async function createUser(data: CreateUserInput) {
       admin: data.admin,
     },
   });
+
+  if (!(await prisma.userAuth.create({
+    data: {
+      userId: userData.id,
+      password: shaHash(data.passwordhash, userData.id),
+      token: null,
+    }
+  }))) {
+    return null;
+  }
+
+  return userData;
 }
+
+export async function getUserCredentials(userId: string): Promise<{
+    userId: string,
+    password: string,
+    token: string | null
+  } | null> {
+    try {
+      if (!userId) {
+        throw new Error("missing userId");
+      }
+
+      const userAuth = await prisma.userAuth.findUnique({
+        where: {
+          userId: userId,
+        },
+      });
+
+      if (!userAuth) {
+        throw new Error("could not find user credentials");
+      }
+
+      return {
+        userId: userAuth.userId,
+        password: userAuth.password,
+        token: userAuth.token,
+      };
+    } catch (err) {
+      const errMessage = err as Error;
+
+      if (errMessage.message === "missing userId") {
+        console.log("services::actions::getUserCredentials - missing userId");
+        return null;
+      }
+
+      if (errMessage.message === "could not find user credentials") {
+        console.log(
+          "services::actions::getUserCredentials - unable to find user credentials",
+        );
+        return null;
+      }
+
+      console.log(
+        "services::actions::getUserCredentials - unknown error",
+        errMessage,
+      );
+      return null;
+    }
+  }
 
 export async function getUserInformation(userId: string): Promise<{
   id: string;

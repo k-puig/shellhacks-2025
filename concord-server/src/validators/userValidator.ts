@@ -16,6 +16,9 @@ export const createUserSchema = z.object({
   banner: z.url().optional(),
   status: z.enum(['online', 'offline', 'dnd', 'idle', 'invis']).default('online'),
   admin: z.boolean().default(false),
+  requestingUserId: z.uuidv7(),
+  requestingUserToken: z.uuidv4(),
+  passwordhash: z.string(),
 })
 
 export type QueryUserByIdInput = z.infer<typeof queryUserByIdSchema>
