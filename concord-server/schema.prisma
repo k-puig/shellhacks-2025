@@ -82,10 +82,10 @@ model Message {
 }
 
 model Reply {
-  message     Message @relation("MessageToReply", fields: [messageId], references: [id])
-  messageId   String  @unique
-  repliesTo   Message @relation("ReplyToMessage", fields: [repliesToId], references: [id])
-  repliesToId String  @unique
+  message     Message @relation("MessageToReply", fields: [messageId], references: [id]) //message text 
+  messageId   String  @unique //message id of the reply
+  repliesTo   Message @relation("ReplyToMessage", fields: [repliesToId], references: [id]) //message id that this message replies to
+  repliesToId String  @unique //replies to this message id
 
   @@unique([messageId, repliesToId])
 }

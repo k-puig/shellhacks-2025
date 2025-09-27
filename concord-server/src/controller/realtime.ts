@@ -3,7 +3,6 @@ import { sendMessageToChannel, removeMessageFromChannel } from "../services/real
 import { success } from "zod";
 
 
-
 export async function postMessageToChannel(
     io: any,
     c: Context
@@ -114,7 +113,7 @@ export async function deleteMessageFromChannel(
             message: "Message deleted successfully",
             status: 200
         })
-        
+
     } catch (err) {
 
         const errMessage = err as Error;
