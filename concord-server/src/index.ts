@@ -3,6 +3,8 @@ import { cors } from "hono/cors";
 import { Server as Engine } from "@socket.io/bun-engine";
 import { Server } from "socket.io";
 import routes from "./routes/index";
+import { Scalar } from "@scalar/hono-api-reference";
+import { openAPIRouteHandler } from "hono-openapi";
 
 //initialize socket.io server
 const io = new Server();
@@ -49,5 +51,23 @@ app.use(
 );
 
 app.route("/api", routes);
+
+app.get(
+  '/openapi',
+  openAPIRouteHandler(app, {
+    documentation: {
+      info: {
+        title: 'Hono API',
+        version: '1.0.0',
+        description: 'Greeting API',
+      },
+      servers: [
+        { url: 'http://localhost:3000', description: 'Local Server' },
+      ],
+    },
+  })
+)
+
+app.get('/scalar', Scalar({ url: '/openapi' }))
 
 export default app;

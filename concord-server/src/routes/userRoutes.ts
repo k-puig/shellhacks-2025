@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { fetchAllUsers, fetchUserData, createNewUser } from "../controller/userController";
 import { createUserSchema } from "../validators/userValidator";
 import { zValidator } from "@hono/zod-validator";
+import { describeRoute, resolver } from "hono-openapi";
 const actions = new Hono();
 
 actions.get("user/:id", async (c) => {
@@ -30,6 +31,17 @@ actions.get("user", async (c) => {
 
 actions.post(
   "user",
+  describeRoute({
+    description: "Create a new user",
+    responses: {
+      201: {
+        description: "Success",
+        content: {
+          'application/json': { schema: resolver(createUserSchema) },
+        },
+      }
+    }
+  }),
   zValidator('json', createUserSchema),
   async (c) => {
     try {
