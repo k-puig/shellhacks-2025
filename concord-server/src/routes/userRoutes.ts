@@ -11,10 +11,10 @@ import {
 } from "../validators/userValidator";
 import { zValidator } from "@hono/zod-validator";
 import { describeRoute, resolver } from "hono-openapi";
-const actions = new Hono();
+const userRoutes = new Hono();
 
-actions.get(
-  "user/:id",
+userRoutes.get(
+  "/:id",
   describeRoute({
     description: "Get user by id",
     responses: {
@@ -44,8 +44,8 @@ actions.get(
   },
 );
 
-actions.get(
-  "user",
+userRoutes.get(
+  "",
   describeRoute({
     description: "Get all users by instance id",
     responses: {
@@ -73,8 +73,8 @@ actions.get(
   },
 );
 
-actions.post(
-  "user",
+userRoutes.post(
+  "",
   describeRoute({
     description: "Create a new user",
     responses: {
@@ -107,4 +107,4 @@ actions.post(
   },
 );
 
-export default actions;
+export default userRoutes;

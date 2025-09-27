@@ -1,9 +1,11 @@
 //place exported routes below this line
 import { Hono } from "hono";
-import actions from "./userRoutes";
+import userRoutes from "./userRoutes";
+import messageRoutes from "./messageRoutes";
 
 const routes = new Hono();
 
-routes.route("/", actions);
+routes.route("/user", userRoutes);
+routes.route("/message", messageRoutes);
 
 export default routes;
