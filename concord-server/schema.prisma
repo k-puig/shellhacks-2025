@@ -31,10 +31,11 @@ model User {
 }
 
 model Role {
-  User       User     @relation(fields: [userId], references: [id])
-  userId     String
-  Instance   Instance @relation(fields: [instanceId], references: [id])
-  instanceId String
+  User        User     @relation(fields: [userId], references: [id])
+  userId      String
+  Instance    Instance @relation(fields: [instanceId], references: [id])
+  instanceId  String
+  type        String
 
   @@unique([userId, instanceId])
 }

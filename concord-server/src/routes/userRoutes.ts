@@ -12,8 +12,12 @@ actions.get("user/:id", async (c) => {
   }
 });
 
-actions.get("instance/:id/users", async (c) => {
-  const instanceId = c.req.param("id");
+actions.get("user", async (c) => {
+  const instanceId = c.req.query("instance_id");
+  if (!instanceId) {
+    return c.json({ error: "No instance id provided" }, 400);
+  }
+
   const userData = await fetchAllUsers(instanceId);
   if (userData) {
     return c.json(userData);

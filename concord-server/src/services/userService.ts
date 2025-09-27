@@ -114,6 +114,47 @@ export async function getAllUsersFrom(instanceId: string): Promise<
       throw new Error("could not get all users in instance");
     }
 
+    const admins = await prisma.user.findMany({
+      where: {
+        admin: true
+      }
+    });
+    if (!admins) {
+      throw new Error("could not get all admins");
+    }
+    const adminData = await Promise.all(
+      admins.map(async (u) => {
+        const adminRoles = await prisma.role.findMany({
+          where: {
+            userId: u.id,
+          },
+        });
+
+        if (!adminRoles) {
+          throw new Error("could not get admin roles for admin " + u.id);
+        }
+
+        return {
+          id: u.id,
+          userName: u.username,
+          nickName: u.nickname,
+          bio: u.bio,
+          picture: u.picture,
+          banner: u.banner,
+          admin: u.admin,
+          status: (
+            ["online", "offline", "dnd", "idle", "invis"] as const
+          ).includes(u.status as any)
+            ? (u.status as "online" | "offline" | "dnd" | "idle" | "invis")
+            : "offline",
+          role: adminRoles.map(r => ({
+            userId: r.userId,
+            instanceId: r.instanceId,
+          })),
+        }
+      })
+    )
+
     const userData = await Promise.all(
       users.map(async (u) => {
         const userRoles = await prisma.role.findMany({
@@ -143,7 +184,7 @@ export async function getAllUsersFrom(instanceId: string): Promise<
       }),
     );
 
-    return userData;
+    return userData.concat(adminData);
   } catch (err) {
     console.log(err);
     return null;
