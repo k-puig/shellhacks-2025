@@ -4,6 +4,13 @@ export const getMessageByIdSchema = z.object({
     id: z.uuidv7()
 })
 
+export const getMessagesBeforeDate = z.object({
+    date: z.string().refine((val) => !isNaN(Date.parse(val)), {
+        message: "Invalid date string format"
+    }),
+    channelId: z.uuidv7()
+})
+
 export const sendMessageSchema = z.object({
     channelId: z.uuidv7(),
     userId: z.uuidv7(),

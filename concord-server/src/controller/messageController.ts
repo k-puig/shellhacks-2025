@@ -1,7 +1,11 @@
-import { getMessageInformation, sendMessageToChannel } from "../services/messageService";
+import { getMessageInformation, getMessagesBefore, sendMessageToChannel } from "../services/messageService";
 
 export async function fetchMessageData(id:string) {
     return await getMessageInformation(id);
+}
+
+export async function fetchMessagesBefore(date:string, channelId:string) {
+    return getMessagesBefore(date, channelId);
 }
 
 export async function sendMessage(

@@ -85,6 +85,74 @@ export async function getMessageInformation(id:string): Promise<{
   }
 }
 
+export async function getMessagesBefore(date:string, channelId:string) {
+  try {
+    if (!date || !channelId) {
+      throw new Error("missing date or channelId");
+    }
+
+    const messages = await prisma.message.findMany({
+      where: {
+        channelId: channelId,
+        createdAt: {
+          lt: new Date(date),
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 50,
+    });
+
+    const messageInformationPromises = messages.map(async (message) => {
+      const replyData = await prisma.reply.findFirst({
+        where: {
+          messageId: message.id,
+        },
+      });
+
+      let originalMessage = null;
+      if (replyData) {
+        originalMessage = await prisma.message.findUnique({
+          where: {
+            id: replyData.repliesToId,
+          },
+        });
+      }
+
+      return {
+        id: message.id,
+        channelId: message.channelId!,
+        userId: message.userId!,
+        text: message.text,
+        deleted: message.deleted,
+        replies: originalMessage
+          ? {
+              messageId: message.id,
+              repliesToId: originalMessage.id,
+              repliesToText: originalMessage.text,
+            }
+          : null,
+      };
+    });
+
+    return Promise.all(messageInformationPromises);
+  } catch (err) {
+    const errMessage = err as Error;
+
+    if (errMessage.message === "missing date or channelId") {
+      console.log("services::actions::getMessagesBefore - missing date or channelId");
+      return null;
+    }
+
+    console.log(
+      "services::actions::getMessagesBefore - unknown error",
+      errMessage
+    );
+    return null;
+  }
+}
+
 export async function sendMessageToChannel(
   channelId: string,
   userId: string,

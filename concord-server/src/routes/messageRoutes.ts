@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { describeResponse, describeRoute, resolver } from "hono-openapi";
-import { getMessageByIdSchema, sendMessageSchema } from "../validators/messageValidator";
+import { getMessageByIdSchema, getMessagesBeforeDate, sendMessageSchema } from "../validators/messageValidator";
 import { zValidator } from "@hono/zod-validator";
-import { fetchMessageData, sendMessage } from "../controller/messageController";
+import { fetchMessageData, fetchMessagesBefore, sendMessage } from "../controller/messageController";
 
 const messageRoutes = new Hono();
 
@@ -34,6 +34,41 @@ messageRoutes.get(
             return c.json(messageData, 200);
         } else {
             return c.json({ error: "Message not found" }, 404);
+        }
+    }
+)
+
+messageRoutes.get(
+    "",
+    describeRoute({
+        description: "Get up to 50 messages prior to given datetime",
+        responses: {
+            200: {
+                description: "Success getting up to 50 messages",
+                content: {
+                    "application/json": { schema: resolver(getMessagesBeforeDate) }
+                }
+            }
+        }
+    }),
+    zValidator("query", getMessagesBeforeDate),
+    async (c) => {
+        const date = c.req.query("date");
+        if (!date) {
+            return c.json({ error: "date not provided" }, 400);
+        }
+
+        const channelId = c.req.query("channelId");
+        if (!channelId) {
+            return c.json({ error: "channelId not provided" }, 400);
+        }
+
+        const messagesArr = await fetchMessagesBefore(date, channelId);
+        
+        if (messagesArr) {
+            return c.json(messagesArr, 200);
+        } else {
+            return c.json({ error: "Failed to fetch messages" }, 500);
         }
     }
 )
