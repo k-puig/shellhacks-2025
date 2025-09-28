@@ -36,13 +36,14 @@ const LoginPage: React.FC = () => {
             username,
             nickname: username,
             bio: "Test user",
-            picture: null,
-            banner: null,
+            picture: "",
+            banner: "",
             hashPassword: "",
-            algorithms: "{}",
+            admin: false,
             status: "online",
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
+            roles: [],
           },
           "fake-token",
           "fake-refresh-token",
@@ -56,20 +57,20 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-gray-800 border-gray-700">
+    <div className="min-h-screen bg-concord-primary flex items-center justify-center p-4">
+      <Card className="w-full max-w-md bg-concord-secondary border-concord">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-white">
+          <CardTitle className="text-2xl font-bold text-concord-primary">
             Welcome back!
           </CardTitle>
-          <CardDescription className="text-gray-400">
+          <CardDescription className="text-concord-secondary">
             We're so excited to see you again!
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-gray-300">
+              <Label htmlFor="username" className="text-concord-primary">
                 Username
               </Label>
               <Input
@@ -77,13 +78,13 @@ const LoginPage: React.FC = () => {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white"
+                className="bg-concord-tertiary border-concord text-concord-primary"
                 placeholder="Enter your username"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-gray-300">
+              <Label htmlFor="password" className="text-concord-primary">
                 Password
               </Label>
               <Input
@@ -91,7 +92,7 @@ const LoginPage: React.FC = () => {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white"
+                className="bg-concord-tertiary border-concord text-concord-primary"
                 placeholder="Enter your password"
                 required
               />

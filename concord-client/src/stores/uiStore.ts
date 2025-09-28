@@ -6,13 +6,6 @@ interface UiState {
   showMemberList: boolean;
   sidebarCollapsed: boolean;
 
-  // Responsive
-  isMobile: boolean;
-  screenWidth: number;
-
-  // Theme
-  theme: "dark" | "light";
-
   // Modal states
   showUserSettings: boolean;
   showServerSettings: boolean;
@@ -20,20 +13,16 @@ interface UiState {
   showCreateServer: boolean;
   showInviteModal: boolean;
 
-  // Chat states
-  // isTyping: boolean;
-  // typingUsers: string[];
-
   // Navigation
   activeChannelId: string | null;
   activeInstanceId: string | null;
 
+  // Computed: Should show channel sidebar
+  shouldShowChannelSidebar: boolean;
+
   // Actions
   toggleMemberList: () => void;
   toggleSidebar: () => void;
-  setTheme: (theme: "dark" | "light") => void;
-  setScreenWidth: (width: number) => void;
-  updateIsMobile: () => void;
 
   // Modal actions
   openUserSettings: () => void;
@@ -47,16 +36,27 @@ interface UiState {
   openInviteModal: () => void;
   closeInviteModal: () => void;
 
-  // Chat actions
-  // setTyping: (isTyping: boolean) => void;
-  // addTypingUser: (userId: string) => void;
-  // removeTypingUser: (userId: string) => void;
-  // clearTypingUsers: () => void;
-
   // Navigation actions
   setActiveChannel: (channelId: string | null) => void;
   setActiveInstance: (instanceId: string | null) => void;
+  selectedChannelsByInstance: Record<string, string>;
+  setSelectedChannelForInstance: (
+    instanceId: string,
+    channelId: string,
+  ) => void;
+  getSelectedChannelForInstance: (instanceId: string) => string | null;
+  updateSidebarVisibility: (pathname: string) => void;
 }
+
+// Helper function to determine if channel sidebar should be shown
+const shouldShowChannelSidebar = (pathname: string): boolean => {
+  // Show channel sidebar for server pages (not settings, home, etc.)
+  const pathParts = pathname.split("/");
+  const isChannelsRoute = pathParts[1] === "channels";
+  const isSettingsRoute = pathname.includes("/settings");
+
+  return isChannelsRoute && !isSettingsRoute;
+};
 
 export const useUiStore = create<UiState>()(
   persist(
@@ -64,36 +64,22 @@ export const useUiStore = create<UiState>()(
       // Initial state
       showMemberList: true,
       sidebarCollapsed: false,
-      isMobile: typeof window !== "undefined" ? window.innerWidth < 768 : false,
       screenWidth: typeof window !== "undefined" ? window.innerWidth : 1024,
-      theme: "dark",
       showUserSettings: false,
       showServerSettings: false,
       showCreateChannel: false,
       showCreateServer: false,
       showInviteModal: false,
-      isTyping: false,
-      typingUsers: [],
       activeChannelId: null,
       activeInstanceId: null,
+      shouldShowChannelSidebar: false,
+      selectedChannelsByInstance: {},
 
       // Sidebar actions
       toggleMemberList: () =>
         set((state) => ({ showMemberList: !state.showMemberList })),
       toggleSidebar: () =>
         set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
-      setTheme: (theme) => set({ theme }),
-      setScreenWidth: (screenWidth) => set({ screenWidth }),
-      updateIsMobile: () =>
-        set((state) => ({
-          isMobile: state.screenWidth < 768,
-          // Auto-collapse sidebar on mobile
-          sidebarCollapsed:
-            state.screenWidth < 768 ? true : state.sidebarCollapsed,
-          // Hide member list on small screens
-          showMemberList:
-            state.screenWidth < 1024 ? false : state.showMemberList,
-        })),
 
       // Modal actions
       openUserSettings: () => set({ showUserSettings: true }),
@@ -107,23 +93,39 @@ export const useUiStore = create<UiState>()(
       openInviteModal: () => set({ showInviteModal: true }),
       closeInviteModal: () => set({ showInviteModal: false }),
 
-      // Chat actions
-      // setTyping: (isTyping) => set({ isTyping }),
-      // addTypingUser: (userId) =>
-      //   set((state) => ({
-      //     typingUsers: state.typingUsers.includes(userId)
-      //       ? state.typingUsers
-      //       : [...state.typingUsers, userId],
-      //   })),
-      // removeTypingUser: (userId) =>
-      //   set((state) => ({
-      //     typingUsers: state.typingUsers.filter((id) => id !== userId),
-      //   })),
-      // clearTypingUsers: () => set({ typingUsers: [] }),
-
       // Navigation actions
       setActiveChannel: (channelId) => set({ activeChannelId: channelId }),
       setActiveInstance: (instanceId) => set({ activeInstanceId: instanceId }),
+
+      setSelectedChannelForInstance: (instanceId, channelId) =>
+        set((state) => ({
+          selectedChannelsByInstance: {
+            ...state.selectedChannelsByInstance,
+            [instanceId]: channelId,
+          },
+        })),
+
+      getSelectedChannelForInstance: (instanceId) => {
+        const state = get();
+        return state.selectedChannelsByInstance[instanceId] || null;
+      },
+      updateSidebarVisibility: (pathname) => {
+        const showChannelSidebar = shouldShowChannelSidebar(pathname);
+        const pathParts = pathname.split("/");
+        const instanceId = pathParts[2] || null;
+        const channelId = pathParts[3] || null;
+
+        set({
+          shouldShowChannelSidebar: showChannelSidebar,
+          activeInstanceId: instanceId,
+          activeChannelId: channelId,
+        });
+
+        // Store the selected channel for this instance if we have both
+        if (instanceId && channelId) {
+          get().setSelectedChannelForInstance(instanceId, channelId);
+        }
+      },
     }),
     {
       name: "concord-ui-store",
@@ -131,7 +133,8 @@ export const useUiStore = create<UiState>()(
       partialize: (state) => ({
         showMemberList: state.showMemberList,
         sidebarCollapsed: state.sidebarCollapsed,
-        theme: state.theme,
+
+        selectedChannelsByInstance: state.selectedChannelsByInstance,
       }),
     },
   ),

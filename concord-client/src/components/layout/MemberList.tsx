@@ -1,50 +1,68 @@
 import React from "react";
 import { useParams } from "react-router";
-import { Crown, Shield } from "lucide-react";
+import { Crown, Shield, UserIcon } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Role } from "@/types/database";
 import { useInstanceMembers } from "@/hooks/useServers";
-import { UserWithRoles } from "@/types/api";
+import { User } from "@/types/database";
+
+// Status color utility
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case "online":
+      return "bg-status-online";
+    case "away":
+      return "bg-status-away";
+    case "busy":
+      return "bg-status-busy";
+    default:
+      return "bg-status-offline";
+  }
+};
 
 interface MemberItemProps {
-  member: UserWithRoles;
+  member: User;
   isOwner?: boolean;
 }
 
+// Get the user's role for this specific instance
+const getUserRoleForInstance = (roles: Role[], instanceId: string) => {
+  return roles.find((r) => r.instanceId === instanceId)?.role || "member";
+};
+
+// Define role colors and priorities
+const getRoleInfo = (role: string) => {
+  switch (role) {
+    case "admin":
+      return { color: "#ff6b6b", priority: 3, name: "Admin" };
+    case "mod":
+      return { color: "#4ecdc4", priority: 2, name: "Moderator" };
+    default:
+      return { color: null, priority: 1, name: "Member" };
+  }
+};
+
 const MemberItem: React.FC<MemberItemProps> = ({ member, isOwner = false }) => {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "online":
-        return "bg-green-500";
-      case "away":
-        return "bg-yellow-500";
-      case "busy":
-        return "bg-red-500";
-      default:
-        return "bg-gray-500";
-    }
-  };
-
-  const getHighestRole = (roles: any[]) => {
-    if (!roles || roles.length === 0) return null;
-    // Sort by position (higher position = higher role)
-    return roles.sort((a, b) => b.position - a.position)[0];
-  };
-
-  const highestRole = getHighestRole(member.roles);
+  const { instanceId } = useParams();
+  const userRole = getUserRoleForInstance(member.roles, instanceId || "");
+  const roleInfo = getRoleInfo(userRole);
 
   return (
-    <div className="flex items-center px-2 py-1 mx-2 rounded hover:bg-gray-700/50 cursor-pointer group">
+    <div className="panel-button">
       <div className="relative">
         <Avatar className="h-8 w-8">
-          <AvatarImage src={member.picture} alt={member.username} />
-          <AvatarFallback className="text-xs">
+          <AvatarImage
+            src={member.picture || undefined}
+            alt={member.username}
+          />
+          <AvatarFallback className="text-xs bg-primary text-primary-foreground">
             {member.username.slice(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
         {/* Status indicator */}
         <div
-          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-gray-800 ${getStatusColor(member.status)}`}
+          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-sidebar ${getStatusColor(member.status)}`}
         />
       </div>
 
@@ -53,22 +71,24 @@ const MemberItem: React.FC<MemberItemProps> = ({ member, isOwner = false }) => {
           {isOwner && (
             <Crown size={12} className="text-yellow-500 flex-shrink-0" />
           )}
-          {!isOwner && highestRole && (
+          {!isOwner && userRole !== "member" && (
             <Shield
               size={12}
               className="flex-shrink-0"
-              style={{ color: highestRole.color || "#ffffff" }}
+              style={{ color: roleInfo.color || "var(--background)" }}
             />
           )}
           <span
             className="text-sm font-medium truncate"
-            style={{ color: highestRole?.color || "#ffffff" }}
+            style={{ color: roleInfo.color || "var(--color-text-primary)" }}
           >
             {member.nickname || member.username}
           </span>
         </div>
         {member.bio && (
-          <div className="text-xs text-gray-400 truncate">{member.bio}</div>
+          <div className="text-xs text-concord-secondary truncate">
+            {member.bio}
+          </div>
         )}
       </div>
     </div>
@@ -77,16 +97,16 @@ const MemberItem: React.FC<MemberItemProps> = ({ member, isOwner = false }) => {
 
 const MemberList: React.FC = () => {
   const { instanceId } = useParams();
-  const { members, isLoading } = useInstanceMembers(instanceId);
+  const { data: members, isLoading } = useInstanceMembers(instanceId);
 
-  if (!instanceId || instanceId === "@me") {
+  if (!instanceId) {
     return null;
   }
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -94,7 +114,7 @@ const MemberList: React.FC = () => {
   if (!members || members.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-gray-400 text-sm">No members</div>
+        <div className="text-concord-secondary text-sm">No members</div>
       </div>
     );
   }
@@ -102,43 +122,39 @@ const MemberList: React.FC = () => {
   // Group members by role
   const groupedMembers = members.reduce(
     (acc, member) => {
-      const highestRole =
-        member.roles?.length > 0
-          ? member.roles.sort((a, b) => b.position - a.position)[0]
-          : null;
+      const userRole =
+        member.roles.find((r) => r.instanceId === instanceId)?.role || "member";
+      const roleInfo = getRoleInfo(userRole);
 
-      const roleName = highestRole?.name || "Members";
-
-      if (!acc[roleName]) {
-        acc[roleName] = [];
+      if (!acc[roleInfo.name]) {
+        acc[roleInfo.name] = [];
       }
-      acc[roleName].push(member);
+      acc[roleInfo.name].push(member);
       return acc;
     },
-    {} as Record<string, UserWithRoles[]>,
+    {} as Record<string, User[]>,
   );
 
-  // Sort role groups by highest role position
+  // Sort role groups by priority (admin > mod > member)
   const sortedRoleGroups = Object.entries(groupedMembers).sort(
-    ([roleNameA, membersA], [roleNameB, membersB]) => {
-      const roleA = membersA[0]?.roles?.find((r) => r.name === roleNameA);
-      const roleB = membersB[0]?.roles?.find((r) => r.name === roleNameB);
-
-      if (!roleA && !roleB) return 0;
-      if (!roleA) return 1;
-      if (!roleB) return -1;
-
-      return roleB.position - roleA.position;
+    ([roleNameA], [roleNameB]) => {
+      const priorityA = getRoleInfo(roleNameA.toLowerCase())?.priority || 1;
+      const priorityB = getRoleInfo(roleNameB.toLowerCase())?.priority || 1;
+      return priorityB - priorityA;
     },
   );
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 border-l border-concord-primary h-full bg-concord-secondary">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-700">
-        <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">
-          Members — {members.length}
-        </h3>
+      <div className="px-4 py-3 border-b border-concord-primary flex items-center justify-between">
+        <UserIcon size={20} className="text-concord-primary h-8" />
+        <div className="h-8 flex flex-col justify-center">
+          <h3 className="text-sm font-semibold text-concord-secondary tracking-wide">
+            Members: {members.length} Online:{" "}
+            {members.filter((m) => m.status === "online").length}
+          </h3>
+        </div>
       </div>
 
       {/* Member List */}
@@ -148,7 +164,7 @@ const MemberList: React.FC = () => {
             <div key={roleName} className="mb-4">
               {/* Role Header */}
               <div className="px-4 py-1">
-                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                <h4 className="text-xs font-semibold text-concord-secondary uppercase tracking-wide">
                   {roleName} — {roleMembers.length}
                 </h4>
               </div>

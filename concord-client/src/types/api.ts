@@ -1,4 +1,4 @@
-import { Instance, Category, Channel, User, Role, Message } from "./database";
+import { Instance, Category, Channel, User, Message } from "./database";
 
 // API Response wrappers
 export interface ApiResponse<T> {
@@ -30,16 +30,10 @@ export interface CategoryWithChannels extends Category {
 
 export interface InstanceWithDetails extends Instance {
   categories: CategoryWithChannels[];
-  memberCount: number;
-  roles: Role[];
 }
 
 export interface MessageWithUser extends Message {
   user: User;
-}
-
-export interface UserWithRoles extends User {
-  roles: Role[];
 }
 
 // Request types

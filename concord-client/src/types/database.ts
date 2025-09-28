@@ -1,7 +1,7 @@
 export interface Instance {
   id: string;
   name: string;
-  icon?: string;
+  icon?: string | null;
   description?: string;
   createdAt: string;
   updatedAt: string;
@@ -23,7 +23,7 @@ export interface Channel {
   categoryId: string;
   instanceId: string;
   position: number;
-  topic?: string;
+  description?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -33,24 +33,19 @@ export interface User {
   username: string;
   nickname?: string;
   bio?: string;
-  picture?: string;
-  banner?: string;
+  picture?: string | null;
+  banner?: string | null;
   hashPassword: string; // Won't be sent to client
   admin: boolean;
   status: "online" | "away" | "busy" | "offline";
   createdAt: string;
   updatedAt: string;
+  roles: Role[];
 }
 
 export interface Role {
-  id: string;
-  name: string;
-  color?: string;
-  permissions: string; // JSON string of permissions
   instanceId: string;
-  position: number;
-  createdAt: string;
-  updatedAt: string;
+  role: "admin" | "mod" | "member";
 }
 
 export interface Message {
@@ -61,9 +56,13 @@ export interface Message {
   edited: boolean;
   createdAt: string;
   updatedAt: string;
+  isGrouped?: boolean | null;
+  replyTo?: Message | null;
   // Relations
   user?: User;
   channel?: Channel;
+
+  replyToId?: string | null;
 }
 
 // Direct messages

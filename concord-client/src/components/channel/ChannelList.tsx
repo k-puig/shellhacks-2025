@@ -35,10 +35,10 @@ const ChannelItem: React.FC<ChannelItemProps> = ({
   return (
     <Button
       variant="ghost"
-      className={`w-full justify-start px-2 py-1 h-8 text-left font-medium ${
+      className={`w-full justify-start px-2 py-2 h-8 text-left font-medium p-3 rounded-lg transition-all ${
         isActive
-          ? "bg-gray-600 text-white"
-          : "text-gray-300 hover:bg-gray-700 hover:text-gray-100"
+          ? "border-primary bg-primary/10 border-2 "
+          : "hover:border-primary/50"
       }`}
       onClick={onClick}
     >

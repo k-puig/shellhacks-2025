@@ -18,179 +18,255 @@ import {
 
 import { useAuthStore } from "@/stores/authStore";
 import { useUiStore } from "@/stores/uiStore";
+import { SAMPLE_USERS } from "@/hooks/useServers";
 
-const UserPanel: React.FC = () => {
-  const { user, logout } = useAuthStore();
-  const { openUserSettings } = useUiStore();
+// Status color utility
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case "online":
+      return "bg-status-online";
+    case "away":
+      return "bg-status-away";
+    case "busy":
+      return "bg-status-busy";
+    default:
+      return "bg-status-offline";
+  }
+};
 
-  // Voice/Audio states (for future implementation)
-  const [isMuted, setIsMuted] = useState(false);
-  const [isDeafened, setIsDeafened] = useState(false);
+// User Status Dropdown Component
+interface UserStatusDropdownProps {
+  currentStatus: string;
+  onStatusChange: (status: string) => void;
+  children: React.ReactNode;
+}
 
-  if (!user) return null;
+const UserStatusDropdown: React.FC<UserStatusDropdownProps> = ({
+  // currentStatus,
+  onStatusChange,
+  children,
+}) => {
+  const statusOptions = [
+    { value: "online", label: "Online", color: "bg-status-online" },
+    { value: "away", label: "Away", color: "bg-status-away" },
+    { value: "busy", label: "Do Not Disturb", color: "bg-status-busy" },
+    { value: "offline", label: "Invisible", color: "bg-status-offline" },
+  ];
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "online":
-        return "bg-green-500";
-      case "away":
-        return "bg-yellow-500";
-      case "busy":
-        return "bg-red-500";
-      default:
-        return "bg-gray-500";
-    }
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className="checkchekchek" asChild>
+        {children}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="center" className="w-48">
+        {statusOptions.map((status) => (
+          <DropdownMenuItem
+            key={status.value}
+            onClick={() => onStatusChange(status.value)}
+          >
+            <div className="flex items-center space-x-2">
+              <div className={`w-3 h-3 rounded-full ${status.color}`} />
+              <span>{status.label}</span>
+            </div>
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => useUiStore.getState().openUserSettings()}
+        >
+          <Settings size={16} className="mr-2" />
+          User Settings
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => useAuthStore.getState().logout()}
+          className="text-destructive focus:text-destructive"
+        >
+          Log Out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+// Voice Controls Component
+interface VoiceControlsProps {
+  isMuted: boolean;
+  isDeafened: boolean;
+  onMuteToggle: () => void;
+  onDeafenToggle: () => void;
+  onSettingsClick: () => void;
+}
+
+const VoiceControls: React.FC<VoiceControlsProps> = ({
+  isMuted,
+  isDeafened,
+  onMuteToggle,
+  onDeafenToggle,
+  onSettingsClick,
+}) => {
+  return (
+    <div className="flex items-center space-x-1">
+      <TooltipProvider>
+        {/* Mute/Unmute */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-8 w-8 ${isMuted ? "text-destructive hover:text-destructive/80" : "interactive-hover"}`}
+              onClick={onMuteToggle}
+            >
+              {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{isMuted ? "Unmute" : "Mute"}</p>
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Deafen/Undeafen */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-8 w-8 ${isDeafened ? "text-destructive hover:text-destructive/80" : "interactive-hover"}`}
+              onClick={onDeafenToggle}
+            >
+              <Headphones size={18} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{isDeafened ? "Undeafen" : "Deafen"}</p>
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Settings */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 interactive-hover"
+              onClick={onSettingsClick}
+            >
+              <Settings size={18} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>User Settings</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+  );
+};
+
+// User Avatar Component
+interface UserAvatarProps {
+  user: any;
+  size?: "sm" | "md" | "lg";
+  showStatus?: boolean;
+}
+
+const UserAvatar: React.FC<UserAvatarProps> = ({
+  user,
+  size = "md",
+  showStatus = true,
+}) => {
+  const sizeClasses = {
+    sm: "h-6 w-6",
+    md: "h-8 w-8",
+    lg: "h-10 w-10",
   };
 
-  const handleStatusChange = (newStatus: string) => {
-    // TODO: Implement status change
-    console.log("Status change to:", newStatus);
-  };
-
-  const handleMuteToggle = () => {
-    setIsMuted(!isMuted);
-    // TODO: Implement actual mute functionality
-  };
-
-  const handleDeafenToggle = () => {
-    setIsDeafened(!isDeafened);
-    if (!isDeafened) {
-      setIsMuted(true); // Deafening also mutes
-    }
-    // TODO: Implement actual deafen functionality
+  const statusSizeClasses = {
+    sm: "w-2 h-2",
+    md: "w-3 h-3",
+    lg: "w-4 h-4",
   };
 
   return (
-    <div className="flex items-center justify-between px-2 py-2 bg-gray-900 border-t border-gray-700">
-      {/* User Info */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="flex items-center space-x-2 p-1 h-auto hover:bg-gray-700"
-          >
-            <div className="relative">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={user.picture} alt={user.username} />
-                <AvatarFallback className="text-xs bg-blue-600">
-                  {user.username.slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              {/* Status indicator */}
-              <div
-                className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-gray-900 ${getStatusColor(user.status)}`}
-              />
-            </div>
-            <div className="flex-1 min-w-0 text-left">
-              <div className="text-sm font-medium text-white truncate">
-                {user.nickname || user.username}
-              </div>
-              <div className="text-xs text-gray-400 truncate capitalize">
-                {user.status}
-              </div>
-            </div>
-          </Button>
-        </DropdownMenuTrigger>
+    <div className="relative">
+      <Avatar className={sizeClasses[size]}>
+        <AvatarImage src={user.picture || undefined} alt={user.username} />
+        <AvatarFallback className="text-xs text-primary-foreground bg-primary">
+          {user.username.slice(0, 2).toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
+      {showStatus && (
+        <div
+          className={`absolute -bottom-0.5 -right-0.5 ${statusSizeClasses[size]} rounded-full border-2 border-sidebar ${getStatusColor(user.status)}`}
+        />
+      )}
+    </div>
+  );
+};
 
-        <DropdownMenuContent align="start" className="w-48">
-          <DropdownMenuItem onClick={() => handleStatusChange("online")}>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 rounded-full bg-green-500" />
-              <span>Online</span>
-            </div>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleStatusChange("away")}>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 rounded-full bg-yellow-500" />
-              <span>Away</span>
-            </div>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleStatusChange("busy")}>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 rounded-full bg-red-500" />
-              <span>Do Not Disturb</span>
-            </div>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleStatusChange("offline")}>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 rounded-full bg-gray-500" />
-              <span>Invisible</span>
-            </div>
-          </DropdownMenuItem>
+// Main UserPanel Component
+const UserPanel: React.FC = () => {
+  const { user } = useAuthStore();
+  const { openUserSettings } = useUiStore();
 
-          <DropdownMenuSeparator />
+  const [isMuted, setIsMuted] = useState(false);
+  const [isDeafened, setIsDeafened] = useState(false);
 
-          <DropdownMenuItem onClick={openUserSettings}>
-            <Settings size={16} className="mr-2" />
-            User Settings
-          </DropdownMenuItem>
+  const displayUser = user || SAMPLE_USERS.find((u) => u.id === "current");
 
-          <DropdownMenuSeparator />
+  if (!displayUser) {
+    return (
+      <div className="flex-shrink-0 p-2 bg-concord-tertiary">
+        <div className="text-concord-secondary text-sm">No user data</div>
+      </div>
+    );
+  }
 
-          <DropdownMenuItem
-            onClick={logout}
-            className="text-red-400 focus:text-red-400"
-          >
-            Log Out
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+  const handleStatusChange = (newStatus: string) => {
+    console.log("Status change to:", newStatus);
+    // TODO: Implement API call to update user status
+  };
+
+  const handleMuteToggle = () => setIsMuted(!isMuted);
+  const handleDeafenToggle = () => {
+    const newDeafenState = !isDeafened;
+    setIsDeafened(newDeafenState);
+    if (newDeafenState) {
+      setIsMuted(true); // Deafening also mutes
+    }
+  };
+
+  return (
+    <div className="user-panel flex items-center p-2 bg-concord-tertiary border-t border-sidebar">
+      {/* User Info with Dropdown */}
+      <UserStatusDropdown
+        currentStatus={displayUser.status}
+        onStatusChange={handleStatusChange}
+      >
+        <Button
+          variant="ghost"
+          className="flex-1 flex items-center h-auto p-1 rounded-md hover:bg-concord-secondary"
+        >
+          <UserAvatar user={displayUser} size="md" />
+          <div className="ml-2 flex-1 min-w-0 text-left">
+            <div className="text-sm font-medium text-concord-primary truncate">
+              {displayUser.nickname || displayUser.username}
+            </div>
+            <div className="text-xs text-concord-secondary truncate capitalize">
+              {displayUser.status}
+            </div>
+          </div>
+        </Button>
+      </UserStatusDropdown>
 
       {/* Voice Controls */}
-      <div className="flex items-center space-x-1">
-        <TooltipProvider>
-          {/* Mute/Unmute */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-8 w-8 ${isMuted ? "text-red-400 hover:text-red-300" : "text-gray-400 hover:text-white"}`}
-                onClick={handleMuteToggle}
-              >
-                {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{isMuted ? "Unmute" : "Mute"}</p>
-            </TooltipContent>
-          </Tooltip>
-
-          {/* Deafen/Undeafen */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-8 w-8 ${isDeafened ? "text-red-400 hover:text-red-300" : "text-gray-400 hover:text-white"}`}
-                onClick={handleDeafenToggle}
-              >
-                <Headphones size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{isDeafened ? "Undeafen" : "Deafen"}</p>
-            </TooltipContent>
-          </Tooltip>
-
-          {/* Settings */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-gray-400 hover:text-white"
-                onClick={openUserSettings}
-              >
-                <Settings size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>User Settings</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+      <VoiceControls
+        isMuted={isMuted}
+        isDeafened={isDeafened}
+        onMuteToggle={handleMuteToggle}
+        onDeafenToggle={handleDeafenToggle}
+        onSettingsClick={openUserSettings}
+      />
     </div>
   );
 };

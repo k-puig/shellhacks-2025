@@ -49,14 +49,14 @@ const Avatar: React.FC<AvatarProps> = ({
   const getStatusColor = (status: string) => {
     switch (status) {
       case "online":
-        return "bg-green-500";
+        return "bg-status-online";
       case "away":
-        return "bg-yellow-500";
+        return "bg-status-away";
       case "busy":
-        return "bg-red-500";
+        return "bg-status-busy";
       case "offline":
       default:
-        return "bg-gray-500";
+        return "bg-status-offline";
     }
   };
 
@@ -71,7 +71,7 @@ const Avatar: React.FC<AvatarProps> = ({
   };
 
   const getFallbackColor = (userId: string) => {
-    // Generate a consistent color based on user ID
+    // Generate a consistent color based on user ID using theme colors
     const colors = [
       "bg-red-500",
       "bg-blue-500",
@@ -123,7 +123,7 @@ const Avatar: React.FC<AvatarProps> = ({
       {showStatus && (
         <div
           className={cn(
-            "absolute rounded-full border-2 border-gray-800",
+            "absolute rounded-full border-2 border-sidebar",
             statusSizes[size],
             statusPositions[size],
             getStatusColor(user.status),

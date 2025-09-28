@@ -39,6 +39,23 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* concord-specific custom properties */
+  --color-text-primary: var(--foreground);
+  --color-text-secondary: var(--muted-foreground);
+  --color-text-muted: var(--muted-foreground);
+  --color-interactive-normal: var(--muted-foreground);
+  --color-interactive-hover: var(--foreground);
+  --color-interactive-active: var(--primary);
+  --color-background-primary: var(--background);
+  --color-background-secondary: var(--card);
+  --color-background-tertiary: var(--muted);
+
+  /* Status colors - these remain consistent across themes */
+  --color-status-online: oklch(0.6 0.15 140);
+  --color-status-away: oklch(0.75 0.15 85);
+  --color-status-busy: oklch(0.65 0.2 25);
+  --color-status-offline: var(--muted-foreground);
 }
 
 :root {
@@ -112,9 +129,179 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    border-color: var(--border);
+    outline-color: var(--ring, oklch(0.708 0 0)) / 50%;
   }
   body {
-    @apply bg-background text-foreground;
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+}
+
+/* Background utilities */
+@utility bg-concord-primary {
+  background-color: var(--color-background-primary);
+}
+@utility bg-concord-secondary {
+  background-color: var(--color-background-secondary);
+}
+@utility bg-concord-tertiary {
+  background-color: var(--color-background-tertiary);
+}
+
+/* Text utilities */
+@utility text-concord-primary {
+  color: var(--color-text-primary);
+}
+@utility text-concord-secondary {
+  color: var(--color-text-secondary);
+}
+@utility text-concord-muted {
+  color: var(--color-text-muted);
+}
+
+/* Interactive utilities */
+@utility text-interactive-normal {
+  color: var(--color-interactive-normal);
+}
+@utility text-interactive-hover {
+  color: var(--color-interactive-hover);
+}
+@utility text-interactive-active {
+  color: var(--color-interactive-active);
+}
+
+/* Status utilities */
+@utility text-status-online {
+  color: var(--color-status-online);
+}
+@utility text-status-away {
+  color: var(--color-status-away);
+}
+@utility text-status-busy {
+  color: var(--color-status-busy);
+}
+@utility text-status-offline {
+  color: var(--color-status-offline);
+}
+
+@utility bg-status-online {
+  background-color: var(--color-status-online);
+}
+@utility bg-status-away {
+  background-color: var(--color-status-away);
+}
+@utility bg-status-busy {
+  background-color: var(--color-status-busy);
+}
+@utility bg-status-offline {
+  background-color: var(--color-status-offline);
+}
+
+/* Border utilities */
+@utility border-concord {
+  border-color: var(--color-border);
+}
+@utility border-sidebar {
+  border-color: var(--color-sidebar-border);
+}
+
+@utility interactive-hover {
+  transition-property: color;
+  transition-duration: 200ms;
+  transition-timing-function: ease-in-out;
+  color: var(--color-interactive-normal);
+  &:hover {
+    color: var(--color-interactive-hover);
+  }
+}
+
+@utility spacing-xs {
+  padding: var(--tw-spacing-1, 0.25rem);
+  gap: var(--tw-spacing-1, 0.25rem);
+}
+@utility spacing-sm {
+  padding: var(--tw-spacing-2, 0.5rem);
+  gap: var(--tw-spacing-2, 0.5rem);
+}
+@utility spacing-md {
+  padding: var(--tw-spacing-4, 1rem);
+  gap: var(--tw-spacing-4, 1rem);
+}
+@utility spacing-lg {
+  padding: var(--tw-spacing-6, 1.5rem);
+  gap: var(--tw-spacing-6, 1.5rem);
+}
+@utility spacing-xl {
+  padding: var(--tw-spacing-8, 2rem);
+  gap: var(--tw-spacing-8, 2rem);
+}
+
+@utility spacing-x-xs {
+  padding-left: var(--tw-spacing-1, 0.25rem);
+  padding-right: var(--tw-spacing-1, 0.25rem);
+}
+@utility spacing-x-sm {
+  padding-left: var(--tw-spacing-2, 0.5rem);
+  padding-right: var(--tw-spacing-2, 0.5rem);
+}
+@utility spacing-x-md {
+  padding-left: var(--tw-spacing-4, 1rem);
+  padding-right: var(--tw-spacing-4, 1rem);
+}
+@utility spacing-x-lg {
+  padding-left: var(--tw-spacing-6, 1.5rem);
+  padding-right: var(--tw-spacing-6, 1.5rem);
+}
+@utility spacing-x-xl {
+  padding-left: var(--tw-spacing-8, 2rem);
+  padding-right: var(--tw-spacing-8, 2rem);
+}
+
+@utility spacing-y-xs {
+  padding-top: var(--tw-spacing-1, 0.25rem);
+  padding-bottom: var(--tw-spacing-1, 0.25rem);
+}
+@utility spacing-y-sm {
+  padding-top: var(--tw-spacing-2, 0.5rem);
+  padding-bottom: var(--tw-spacing-2, 0.5rem);
+}
+@utility spacing-y-md {
+  padding-top: var(--tw-spacing-4, 1rem);
+  padding-bottom: var(--tw-spacing-4, 1rem);
+}
+@utility spacing-y-lg {
+  padding-top: var(--tw-spacing-6, 1.5rem);
+  padding-bottom: var(--tw-spacing-6, 1.5rem);
+}
+@utility spacing-y-xl {
+  padding-top: var(--tw-spacing-8, 2rem);
+  padding-bottom: var(--tw-spacing-8, 2rem);
+}
+
+@layer components {
+  /* Sidebar styling */
+  .sidebar-primary {
+    background-color: var(--color-sidebar);
+    border-right-width: 1px;
+    border-color: var(--color-sidebar-border);
+  }
+
+  .sidebar-secondary {
+    background-color: var(--color-background-secondary);
+    border-right-width: 1px;
+    border-color: var(--color-border);
+  }
+
+  .panel-button {
+    display: flex;
+    width: full;
+    flex-grow: 1;
+    border-radius: 12px;
+    margin: 4px 8px;
+    padding: 8px;
+    &:hover {
+      background-color: var(--color-background-tertiary);
+    }
   }
 }

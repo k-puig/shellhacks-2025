@@ -26,18 +26,17 @@ const ServerIcon: React.FC<ServerIconProps> = ({
     <div className="relative group">
       {/* Active indicator */}
       <div
-        className={`absolute left-0 top-1/2 transform -translate-y-1/2 w-1 bg-white rounded-r transition-all duration-200 ${
-          isActive ? "h-10" : "h-2 group-hover:h-5"
+        className={`absolute left-0 top-1/2 transform -translate-y-1/2 w-1 bg-accent-foreground rounded transition-all duration-200 ${
+          isActive ? "h-10 rounded-xl" : "rounded-r h-2 group-hover:h-5"
         }`}
       />
-
       <Button
         variant="ghost"
         size="icon"
         className={`w-12 h-12 ml-3 transition-all duration-200 ${
           isActive
-            ? "rounded-xl bg-blue-600 hover:bg-blue-500 text-white"
-            : "rounded-2xl hover:rounded-xl bg-gray-700 hover:bg-blue-600 text-gray-300 hover:text-white"
+            ? "rounded-xl border-primary bg-primary/10 border-2"
+            : "rounded-2xl hover:rounded-xl border hover:border-primary/50"
         }`}
         onClick={onClick}
       >
