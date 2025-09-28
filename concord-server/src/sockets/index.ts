@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import { registerVoiceHandlers } from "./voiceHandler";
+import { registerMessageHandlers } from "./messageHandler";
 
 export function registerSocketHandlers(io: Server) {
   // bad practice
@@ -13,4 +14,6 @@ export function registerSocketHandlers(io: Server) {
 
   // good practice
   registerVoiceHandlers(io);
+  registerMessageHandlers(io);
+
 }
