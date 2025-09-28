@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { getUserCredentials } from "./userService";
+import { PutMessage } from "../validators/messageValidator";
 
 const prisma = new PrismaClient();
 
@@ -151,6 +152,34 @@ export async function getMessagesBefore(date: string, channelId: string) {
       "services::actions::getMessagesBefore - unknown error",
       errMessage,
     );
+    return null;
+  }
+}
+
+export async function editMessage(data: PutMessage) {
+  try {
+    const userCreds = await getUserCredentials(data.id);
+    if (!userCreds || userCreds.token == null || userCreds.token != data.token) {
+      return null;
+    }
+
+    const updatedMessage = await prisma.message.update({
+      where: {
+        id: data.id,
+      },
+      data: {
+        text: data.content,
+        deleted: data.deleted,
+      },
+    });
+
+    if (!updatedMessage) {
+      return null;
+    }
+
+    return updatedMessage;
+  } catch (error) {
+    console.error("Error editing message:", error);
     return null;
   }
 }

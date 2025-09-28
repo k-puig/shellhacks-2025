@@ -18,3 +18,12 @@ export const sendMessageSchema = z.object({
   token: z.string(),
   repliedMessageId: z.uuidv7().nullable().optional(),
 });
+
+export const putMessageSchema = z.object({
+  id: z.uuidv7(),
+  content: z.string().optional(),
+  deleted: z.boolean().optional(),
+  token: z.string(),
+});
+
+export type PutMessage = z.infer<typeof putMessageSchema>;

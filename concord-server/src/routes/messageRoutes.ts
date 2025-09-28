@@ -81,6 +81,28 @@ messageRoutes.get(
   },
 );
 
+messageRoutes.put(
+  "/:id",
+  describeRoute({
+    description: "Edit message fields",
+    responses: {
+      200: {
+        description: "Success"
+      },
+      404: {
+        description: "Message not found"
+      },
+      500: {
+        description: "Bad request"
+      }
+    }
+  }),
+  zValidator("json", sendMessageSchema),
+  async (c) => {
+    
+  }
+)
+
 messageRoutes.post(
   "",
   describeRoute({

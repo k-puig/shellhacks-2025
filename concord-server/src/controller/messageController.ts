@@ -1,8 +1,10 @@
 import {
+  editMessage,
   getMessageInformation,
   getMessagesBefore,
   sendMessageToChannel,
 } from "../services/messageService";
+import { PutMessage } from "../validators/messageValidator";
 
 export async function fetchMessageData(id: string) {
   return await getMessageInformation(id);
@@ -26,4 +28,8 @@ export async function sendMessage(
     token,
     repliedMessageId,
   );
+}
+
+export async function putMessage(data: PutMessage) {
+  return await editMessage(data);
 }
