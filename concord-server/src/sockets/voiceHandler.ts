@@ -175,5 +175,20 @@ export function registerVoiceHandlers(io: Server) {
         });
       }
     });
+
+    // Handle WebRTC Offer
+    socket.on("webrtc-offer", async (data) => {
+      // Implementation for handling WebRTC offer
+    });
+
+    // Handle WebRTC Answer
+    socket.on("webrtc-answer", async (data) => {
+      // Implementation for handling WebRTC answer
+    });
+
+    // Handle ICE Candidates
+    socket.on("webrtc-ice-candidate", async (data) => {
+      // Implementation for handling ICE candidates
+    });
   });
 }
