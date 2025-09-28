@@ -104,7 +104,7 @@ model Message {
   User        User          @relation(fields: [userId], references: [id])
   userId      String
   deleted     Boolean
-  text        String
+  text        String        @db.VarChar(2000)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   replies     Reply?        @relation("MessageToReply")
@@ -114,7 +114,7 @@ model Message {
 }
 
 model Reply {
-  message     Message  @relation("MessageToReply", fields: [messageId], references: [id]) //message text 
+  message     Message  @relation("MessageToReply", fields: [messageId], references: [id]) //message text
   messageId   String   @unique //message id of the reply
   repliesTo   Message  @relation("ReplyToMessage", fields: [repliesToId], references: [id]) //message id that this message replies to
   repliesToId String   @unique //replies to this message id

@@ -57,3 +57,64 @@ export async function getAllInstances() {
     };
   }
 }
+
+export async function getInstanceByChannelId(id: string) {
+  try {
+    const instance = await prisma.instance.findFirst({
+      where: {
+        Category: {
+          some: {
+            Channel: {
+              some: {
+                id: id
+              }
+            }
+          }
+        }
+      },
+    });
+
+    if (!instance) {
+      return null;
+    }
+
+    return instance;
+  } catch (error) {
+    console.error("Error fetching instance by channel ID:", error);
+    return null;
+  }
+}
+
+export async function getInstancesByUserId(id: string) {
+  try {
+    const user = await getUserInformation(id);
+    if (user && user.admin) {
+      const adminInstances = await getAllInstances();
+      if (adminInstances && adminInstances.success)  {
+        return adminInstances.data;
+      }
+    }
+
+    const instance = await prisma.instance.findMany({
+      where: {
+        Role: {
+          some: {
+            User: {
+              id: id
+            }
+          }
+        }
+      }
+    });
+
+    if (!instance) {
+      return null;
+    }
+
+    return instance;
+  } catch (error) {
+    console.error("Error fetching instance by channel ID:", error);
+    return null;
+  }
+}
+

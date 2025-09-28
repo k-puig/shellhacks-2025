@@ -5,46 +5,20 @@ import { Server } from "socket.io";
 import routes from "./routes/index";
 import { Scalar } from "@scalar/hono-api-reference";
 import { openAPIRouteHandler } from "hono-openapi";
+import { registerSocketHandlers } from "./sockets";
 
-//initialize socket.io server
-const io = new Server();
-
-//initialize bun engine
-//then bind to socket.io server
-const engine = new Engine();
-io.bind(engine);
-
-io.on("connection", (socket) => {
-  //get userId and clientId from query params
-  const userId = socket.handshake.query.userId;
-  const clientId = socket.handshake.query.clientId;
-  if (!userId || Array.isArray(userId)) {
-    socket.disconnect();
-    throw new Error("Invalid user ID");
-  }
-
-  if (!clientId || Array.isArray(clientId)) {
-    socket.disconnect();
-    throw new Error("Invalid client ID");
-  }
-
-  socket.join(userId);
-  console.log(
-    `User ${userId} connected. Client ID ${clientId} on socket ${socket.id}`,
-  );
-
-  socket.on("disconnect", () => {
-    console.log(`User ${userId} disconnected from socket ${socket.id}`);
-  });
-});
-
+// Routes
 const app = new Hono();
 
 app.use(
   "*",
   cors({
-    origin: "http://localhost:5173",
-    allowHeaders: ["Content-Type", "Authorization"],
+    origin: ["http://localhost:5173", "https://concord.kpuig.net"],
+    allowHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Access-Control-Allow-Origin",
+    ],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   }),
@@ -68,4 +42,44 @@ app.get(
 
 app.get("/scalar", Scalar({ url: "/openapi" }));
 
-export default app;
+// initialize socket.io server
+const io = new Server({
+  cors: {
+    origin: ["http://localhost:5173", "https://concord.kpuig.net"],
+    credentials: true,
+  },
+});
+const engine = new Engine();
+io.bind(engine);
+
+// Register socket.io events
+registerSocketHandlers(io);
+
+const { websocket } = engine.handler();
+
+export default {
+  port: 3000,
+  idleTimeout: 30, // must be greater than the "pingInterval" option of the engine, which defaults to 25 seconds
+
+  async fetch(req: Request, server: Bun.Server) {
+    const url = new URL(req.url);
+
+    if (url.pathname === "/socket.io/") {
+      const response = await engine.handleRequest(req, server);
+      // Add CORS headers explicitly
+      const origin = req.headers.get("Origin");
+      if (
+        origin &&
+        ["http://localhost:5173", "https://concord.kpuig.net"].includes(origin)
+      ) {
+        response.headers.set("Access-Control-Allow-Origin", origin);
+      }
+      response.headers.set("Access-Control-Allow-Credentials", "true");
+      return response;
+    } else {
+      return app.fetch(req, server);
+    }
+  },
+
+  websocket,
+};
