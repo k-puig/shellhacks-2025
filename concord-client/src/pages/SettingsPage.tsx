@@ -5,6 +5,7 @@ import {
   User,
   Shield,
   Mic,
+  Eye,
   Settings,
   ChevronRight,
   Moon,
@@ -45,12 +46,12 @@ const SETTINGS_SECTIONS: SettingsSection[] = [
     icon: User,
     description: "Profile, privacy, and account settings",
   },
-  {
-    id: "security",
-    title: "Security",
-    icon: Lock,
-    description: "Password and security settings",
-  },
+  // {
+  //   id: "security",
+  //   title: "Security",
+  //   icon: Lock,
+  //   description: "Password and security settings",
+  // },
   {
     id: "appearance",
     title: "Appearance",
@@ -627,6 +628,98 @@ const AppearanceSettings: React.FC = () => {
                   style={{ backgroundColor: currentDarkTheme.colors.accent }}
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Theme Grid */}
+          <div className="mt-6">
+            <Label className="text-sm font-medium">Available Themes</Label>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {/* Light Themes */}
+              {lightThemes.map((theme) => (
+                <button
+                  key={theme.id}
+                  onClick={() => setTheme(theme.id)}
+                  className={`p-3 rounded-lg border-2 transition-all text-left ${
+                    currentLightTheme.id === theme.id
+                      ? "border-primary bg-primary/10"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-sm">{theme.name}</span>
+                    <Sun className="h-4 w-4 text-yellow-500" />
+                  </div>
+                  {theme.description && (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {theme.description}
+                    </p>
+                  )}
+                  <div className="flex gap-1">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: theme.colors.primary }}
+                    />
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: theme.colors.secondary }}
+                    />
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: theme.colors.accent }}
+                    />
+                  </div>
+                </button>
+              ))}
+
+              {/* Dark Themes */}
+              {darkThemes.map((theme) => (
+                <button
+                  key={theme.id}
+                  onClick={() => setTheme(theme.id)}
+                  className={`p-3 rounded-lg border-2 transition-all text-left ${
+                    currentDarkTheme.id === theme.id
+                      ? "border-primary bg-primary/10"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-sm">{theme.name}</span>
+                    <Moon className="h-4 w-4 text-blue-400" />
+                  </div>
+                  {theme.description && (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {theme.description}
+                    </p>
+                  )}
+                  <div className="flex gap-1">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: theme.colors.primary }}
+                    />
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: theme.colors.secondary }}
+                    />
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: theme.colors.accent }}
+                    />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Theme Stats */}
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-lg font-semibold">{lightThemes.length}</div>
+              <div className="text-sm text-muted-foreground">Light Themes</div>
+            </div>
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-lg font-semibold">{darkThemes.length}</div>
+              <div className="text-sm text-muted-foreground">Dark Themes</div>
             </div>
           </div>
         </CardContent>

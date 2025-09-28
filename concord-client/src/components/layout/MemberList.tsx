@@ -9,7 +9,6 @@ import { Role } from "@/types/database";
 import { useInstanceMembers } from "@/hooks/useServers";
 import { useAuthStore } from "@/stores/authStore";
 import { User } from "@/types/database";
-import { UserRoleModal } from "@/components/modals/UserRoleModal";
 
 // Status color utility
 const getStatusColor = (status: string) => {
@@ -28,8 +27,6 @@ const getStatusColor = (status: string) => {
 interface MemberItemProps {
   member: User;
   instanceId: string;
-  currentUserRole: string;
-  canManageRoles: boolean;
   isOwner?: boolean;
 }
 
@@ -53,27 +50,17 @@ const getRoleInfo = (role: string) => {
 const MemberItem: React.FC<MemberItemProps> = ({
   member,
   instanceId,
-  currentUserRole,
-  canManageRoles,
   isOwner = false,
 }) => {
-  const [showUserModal, setShowUserModal] = useState(false);
   const userRole = getUserRoleForInstance(member.roles, instanceId || "");
   const roleInfo = getRoleInfo(userRole);
-
-  const handleMemberClick = () => {
-    if (canManageRoles && !member.admin) {
-      setShowUserModal(true);
-    }
-  };
 
   return (
     <>
       <Button
         variant="ghost"
         className="w-full justify-start p-2 h-auto hover:bg-concord-tertiary/50"
-        onClick={handleMemberClick}
-        disabled={!canManageRoles || member.admin}
+        disabled={member.admin}
       >
         <div className="flex items-center gap-3 w-full">
           <div className="relative">
@@ -119,16 +106,6 @@ const MemberItem: React.FC<MemberItemProps> = ({
           </div>
         </div>
       </Button>
-
-      {/* User Role Modal */}
-      <UserRoleModal
-        isOpen={showUserModal}
-        onClose={() => setShowUserModal(false)}
-        user={member}
-        instanceId={instanceId}
-        currentUserRole={currentUserRole}
-        canManageRoles={canManageRoles}
-      />
     </>
   );
 };
@@ -137,20 +114,6 @@ const MemberList: React.FC = () => {
   const { instanceId } = useParams();
   const { data: members, isLoading } = useInstanceMembers(instanceId);
   const { user: currentUser } = useAuthStore();
-
-  // Check if current user can manage roles
-  const canManageRoles = React.useMemo(() => {
-    if (!currentUser || !instanceId) return false;
-
-    // Global admins can manage roles
-    if (currentUser.admin) return true;
-
-    // Check if user is admin or mod in this instance
-    const userRole = currentUser.roles.find(
-      (role) => role.instanceId === instanceId,
-    );
-    return userRole && (userRole.role === "admin" || userRole.role === "mod");
-  }, [currentUser, instanceId]);
 
   const currentUserRole = React.useMemo(() => {
     if (!currentUser || !instanceId) return "member";
@@ -212,12 +175,9 @@ const MemberList: React.FC = () => {
       {/* Header */}
       <div className="px-4 py-3 border-b border-concord-primary flex items-center justify-between">
         <UserIcon size={20} className="text-concord-primary h-8" />
-        <div className="h-8 flex flex-col justify-center">
-          <h3 className="text-sm font-semibold text-concord-secondary tracking-wide">
-            Members: {members.length} Online:{" "}
-            {members.filter((m) => m.status === "online").length}
-          </h3>
-        </div>
+        <p className="text-sm font-semibold text-concord-secondary tracking-wide">
+          {members.length} Members
+        </p>
       </div>
 
       {/* Member List */}
@@ -242,7 +202,6 @@ const MemberList: React.FC = () => {
                       member={member}
                       instanceId={instanceId}
                       currentUserRole={currentUserRole}
-                      canManageRoles={canManageRoles}
                       isOwner={false}
                     />
                   ))}

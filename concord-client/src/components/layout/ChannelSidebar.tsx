@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useInstanceDetails } from "@/hooks/useServers";
 import { useUiStore } from "@/stores/uiStore";
 import ChannelList from "@/components/channel/ChannelList";
+import { CreateCategoryModal, CreateChannelModal } from "../server/ServerIcon";
 
 const ChannelSidebar: React.FC = () => {
   const { instanceId } = useParams();
@@ -94,6 +95,8 @@ const ChannelSidebar: React.FC = () => {
           </div>
         </div>
       </ScrollArea>
+      <CreateChannelModal />
+      <CreateCategoryModal />
     </div>
   );
 };

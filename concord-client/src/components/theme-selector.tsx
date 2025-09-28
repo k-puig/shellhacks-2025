@@ -1,15 +1,14 @@
 import React, { useState } from "react";
-import { Moon, Sun, Monitor, Palette, Plus, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuGroup,
-} from "@/components/ui/dropdown-menu";
+  Moon,
+  Sun,
+  Monitor,
+  Palette,
+  Plus,
+  Trash2,
+  Settings,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +16,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +29,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import {
   useTheme,
   ThemeDefinition,
@@ -132,101 +134,107 @@ const CreateThemeModal: React.FC<{
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Basic Info */}
-          <div className="space-y-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="theme-name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="theme-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="col-span-3"
-                placeholder="My Custom Theme"
-              />
+        <ScrollArea className="max-h-96">
+          <div className="space-y-6 pr-4">
+            {/* Basic Info */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="theme-name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="theme-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="col-span-3"
+                  placeholder="My Custom Theme"
+                />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="theme-description" className="text-right">
+                  Description
+                </Label>
+                <Textarea
+                  id="theme-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="col-span-3"
+                  placeholder="Optional description"
+                  rows={2}
+                />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="theme-mode" className="text-right">
+                  Mode
+                </Label>
+                <Select
+                  value={mode}
+                  onValueChange={(v: "light" | "dark") => setMode(v)}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">Light</SelectItem>
+                    <SelectItem value="dark">Dark</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="theme-description" className="text-right">
-                Description
-              </Label>
-              <Textarea
-                id="theme-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="col-span-3"
-                placeholder="Optional description"
-                rows={2}
-              />
-            </div>
+            <Separator />
 
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="theme-mode" className="text-right">
-                Mode
-              </Label>
-              <Select
-                value={mode}
-                onValueChange={(v: "light" | "dark") => setMode(v)}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="light">Light</SelectItem>
-                  <SelectItem value="dark">Dark</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Color sections */}
+            <div className="space-y-4">
+              <h4 className="font-medium">Basic Colors</h4>
+              <div className="space-y-3">
+                <ColorInput
+                  label="Background"
+                  value={colors.background}
+                  onChange={(v) => updateColor("background", v)}
+                />
+                <ColorInput
+                  label="Foreground"
+                  value={colors.foreground}
+                  onChange={(v) => updateColor("foreground", v)}
+                />
+                <ColorInput
+                  label="Primary"
+                  value={colors.primary}
+                  onChange={(v) => updateColor("primary", v)}
+                />
+                <ColorInput
+                  label="Secondary"
+                  value={colors.secondary}
+                  onChange={(v) => updateColor("secondary", v)}
+                />
+              </div>
+
+              <Separator />
+
+              <h4 className="font-medium">Sidebar Colors</h4>
+              <div className="space-y-3">
+                <ColorInput
+                  label="Sidebar"
+                  value={colors.sidebar}
+                  onChange={(v) => updateColor("sidebar", v)}
+                />
+                <ColorInput
+                  label="Sidebar Primary"
+                  value={colors.sidebarPrimary}
+                  onChange={(v) => updateColor("sidebarPrimary", v)}
+                />
+                <ColorInput
+                  label="Sidebar Accent"
+                  value={colors.sidebarAccent}
+                  onChange={(v) => updateColor("sidebarAccent", v)}
+                />
+              </div>
             </div>
           </div>
-
-          {/* Color sections */}
-          <div className="space-y-4">
-            <h4 className="font-medium">Basic Colors</h4>
-            <div className="space-y-3">
-              <ColorInput
-                label="Background"
-                value={colors.background}
-                onChange={(v) => updateColor("background", v)}
-              />
-              <ColorInput
-                label="Foreground"
-                value={colors.foreground}
-                onChange={(v) => updateColor("foreground", v)}
-              />
-              <ColorInput
-                label="Primary"
-                value={colors.primary}
-                onChange={(v) => updateColor("primary", v)}
-              />
-              <ColorInput
-                label="Secondary"
-                value={colors.secondary}
-                onChange={(v) => updateColor("secondary", v)}
-              />
-            </div>
-
-            <h4 className="font-medium">Sidebar Colors</h4>
-            <div className="space-y-3">
-              <ColorInput
-                label="Sidebar"
-                value={colors.sidebar}
-                onChange={(v) => updateColor("sidebar", v)}
-              />
-              <ColorInput
-                label="Sidebar Primary"
-                value={colors.sidebarPrimary}
-                onChange={(v) => updateColor("sidebarPrimary", v)}
-              />
-              <ColorInput
-                label="Sidebar Accent"
-                value={colors.sidebarAccent}
-                onChange={(v) => updateColor("sidebarAccent", v)}
-              />
-            </div>
-          </div>
-        </div>
+        </ScrollArea>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
@@ -241,12 +249,11 @@ const CreateThemeModal: React.FC<{
   );
 };
 
-// Main theme selector component
+// Main theme selector component as modal
 export function ThemeSelector() {
   const {
     mode,
     currentTheme,
-    // themes,
     setMode,
     setTheme,
     addCustomTheme,
@@ -254,6 +261,7 @@ export function ThemeSelector() {
     getThemesForMode,
   } = useTheme();
 
+  const [isMainModalOpen, setIsMainModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const lightThemes = getThemesForMode("light");
@@ -272,142 +280,200 @@ export function ThemeSelector() {
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
+      <Dialog open={isMainModalOpen} onOpenChange={setIsMainModalOpen}>
+        <DialogTrigger asChild>
           <Button variant="outline" size="sm">
-            {getCurrentModeIcon()}
-            <span className="ml-2">{currentTheme.name}</span>
+            <Settings className="h-4 w-4 mr-2" />
+            Theme
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>Appearance</DropdownMenuLabel>
-          <DropdownMenuSeparator />
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {getCurrentModeIcon()}
+              Appearance Settings
+            </DialogTitle>
+            <DialogDescription>
+              Choose your preferred theme and color scheme
+            </DialogDescription>
+          </DialogHeader>
 
-          {/* Mode Selection */}
-          <DropdownMenuGroup>
-            <DropdownMenuLabel className="text-xs">Mode</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => setMode("light")}>
-              <Sun className="mr-2 h-4 w-4" />
-              <span>Light</span>
-              {mode === "light" && (
-                <Badge variant="secondary" className="ml-auto">
-                  Active
-                </Badge>
-              )}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setMode("dark")}>
-              <Moon className="mr-2 h-4 w-4" />
-              <span>Dark</span>
-              {mode === "dark" && (
-                <Badge variant="secondary" className="ml-auto">
-                  Active
-                </Badge>
-              )}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setMode("system")}>
-              <Monitor className="mr-2 h-4 w-4" />
-              <span>System</span>
-              {mode === "system" && (
-                <Badge variant="secondary" className="ml-auto">
-                  Active
-                </Badge>
-              )}
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
+          <div className="space-y-6">
+            {/* Current Theme Display */}
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div>
+                <p className="font-medium">{currentTheme.name}</p>
+                {currentTheme.description && (
+                  <p className="text-sm text-muted-foreground">
+                    {currentTheme.description}
+                  </p>
+                )}
+              </div>
+              <Badge variant="secondary">Active</Badge>
+            </div>
 
-          <DropdownMenuSeparator />
-
-          {/* Light Themes */}
-          {lightThemes.length > 0 && (
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-xs">
-                Light Themes
-              </DropdownMenuLabel>
-              {lightThemes.map((theme) => (
-                <DropdownMenuItem
-                  key={theme.id}
-                  onClick={() => setTheme(theme.id)}
-                  className="justify-between"
+            {/* Mode Selection */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Display Mode</Label>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  variant={mode === "light" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setMode("light")}
+                  className="flex flex-col gap-1 h-auto py-3"
                 >
-                  <div className="flex items-center">
-                    <Palette className="mr-2 h-4 w-4" />
-                    <span>{theme.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {currentTheme.id === theme.id && (
-                      <Badge variant="secondary">Active</Badge>
-                    )}
-                    {theme.isCustom && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-1 hover:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeCustomTheme(theme.id);
-                        }}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuGroup>
-          )}
-
-          {lightThemes.length > 0 && darkThemes.length > 0 && (
-            <DropdownMenuSeparator />
-          )}
-
-          {/* Dark Themes */}
-          {darkThemes.length > 0 && (
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-xs">
-                Dark Themes
-              </DropdownMenuLabel>
-              {darkThemes.map((theme) => (
-                <DropdownMenuItem
-                  key={theme.id}
-                  onClick={() => setTheme(theme.id)}
-                  className="justify-between"
+                  <Sun className="h-4 w-4" />
+                  <span className="text-xs">Light</span>
+                </Button>
+                <Button
+                  variant={mode === "dark" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setMode("dark")}
+                  className="flex flex-col gap-1 h-auto py-3"
                 >
-                  <div className="flex items-center">
-                    <Palette className="mr-2 h-4 w-4" />
-                    <span>{theme.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {currentTheme.id === theme.id && (
-                      <Badge variant="secondary">Active</Badge>
-                    )}
-                    {theme.isCustom && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-1 hover:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeCustomTheme(theme.id);
-                        }}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuGroup>
-          )}
+                  <Moon className="h-4 w-4" />
+                  <span className="text-xs">Dark</span>
+                </Button>
+                <Button
+                  variant={mode === "system" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setMode("system")}
+                  className="flex flex-col gap-1 h-auto py-3"
+                >
+                  <Monitor className="h-4 w-4" />
+                  <span className="text-xs">System</span>
+                </Button>
+              </div>
+            </div>
 
-          <DropdownMenuSeparator />
+            {/* Theme Selection */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Themes</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsCreateModalOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Create
+                </Button>
+              </div>
 
-          {/* Add Custom Theme */}
-          <DropdownMenuItem onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            <span>Create Theme</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+              <ScrollArea className="max-h-64">
+                <div className="space-y-3">
+                  {/* Light Themes */}
+                  {lightThemes.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Light Themes
+                      </p>
+                      {lightThemes.map((theme) => (
+                        <div
+                          key={theme.id}
+                          className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 cursor-pointer"
+                          onClick={() => setTheme(theme.id)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Palette className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">
+                                {theme.name}
+                              </p>
+                              {theme.description && (
+                                <p className="text-xs text-muted-foreground">
+                                  {theme.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {currentTheme.id === theme.id && (
+                              <Badge variant="secondary" className="text-xs">
+                                Active
+                              </Badge>
+                            )}
+                            {theme.isCustom && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 hover:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeCustomTheme(theme.id);
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Dark Themes */}
+                  {darkThemes.length > 0 && (
+                    <div className="space-y-2">
+                      {lightThemes.length > 0 && <Separator />}
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Dark Themes
+                      </p>
+                      {darkThemes.map((theme) => (
+                        <div
+                          key={theme.id}
+                          className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 cursor-pointer"
+                          onClick={() => setTheme(theme.id)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Palette className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">
+                                {theme.name}
+                              </p>
+                              {theme.description && (
+                                <p className="text-xs text-muted-foreground">
+                                  {theme.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {currentTheme.id === theme.id && (
+                              <Badge variant="secondary" className="text-xs">
+                                Active
+                              </Badge>
+                            )}
+                            {theme.isCustom && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 hover:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeCustomTheme(theme.id);
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsMainModalOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <CreateThemeModal
         isOpen={isCreateModalOpen}

@@ -88,8 +88,14 @@ export interface Message {
   createdAt: string;
   deleted: boolean;
   updatedAt: string;
-  replyToId?: string | null;
+  replies: MessageReply;
   user?: BackendUser;
+}
+
+export interface MessageReply {
+  id: string;
+  repliesToId: string;
+  repliesToText: string;
 }
 
 // Enhanced fetch wrapper with auth and error handling

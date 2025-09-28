@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,21 +16,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Hash, Volume2 } from "lucide-react";
+import { Hash, Volume2, Loader2 } from "lucide-react";
 import { useCreateChannel } from "@/hooks/useServers";
+import { useCategoriesByInstance } from "@/hooks/useCategories"; // New hook
 import { CategoryWithChannels } from "@/types/api";
 
 interface CreateChannelModalProps {
   isOpen: boolean;
   onClose: () => void;
-  categories: CategoryWithChannels[];
+  instanceId: string; // Changed to use instanceId instead of categories prop
   defaultCategoryId?: string;
 }
 
 export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
   isOpen,
   onClose,
-  categories,
+  instanceId,
   defaultCategoryId,
 }) => {
   const [name, setName] = useState("");
@@ -38,7 +39,34 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
   const [type, setType] = useState<"text" | "voice">("text");
   const [categoryId, setCategoryId] = useState(defaultCategoryId || "");
 
+  // Fetch categories using the new API
+  const {
+    data: categories,
+    isLoading: categoriesLoading,
+    error: categoriesError,
+  } = useCategoriesByInstance(instanceId);
+
   const createChannelMutation = useCreateChannel();
+
+  // Update categoryId when defaultCategoryId changes or categories load
+  useEffect(() => {
+    if (defaultCategoryId) {
+      setCategoryId(defaultCategoryId);
+    } else if (categories && categories.length > 0 && !categoryId) {
+      // Auto-select first category if none selected
+      setCategoryId(categories[0].id);
+    }
+  }, [defaultCategoryId, categories, categoryId]);
+
+  // Reset form when modal opens/closes
+  useEffect(() => {
+    if (!isOpen) {
+      setName("");
+      setDescription("");
+      setType("text");
+      setCategoryId(defaultCategoryId || "");
+    }
+  }, [isOpen, defaultCategoryId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,6 +97,13 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
         <DialogHeader>
           <DialogTitle>Create Channel</DialogTitle>
         </DialogHeader>
+
+        {categoriesError && (
+          <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
+            Failed to load categories. Please try again.
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>Channel Type</Label>
@@ -118,16 +153,40 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
 
           <div className="space-y-2">
             <Label>Category</Label>
-            <Select value={categoryId} onValueChange={setCategoryId} required>
+            <Select
+              value={categoryId}
+              onValueChange={setCategoryId}
+              required
+              disabled={categoriesLoading}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Select a category" />
+                <SelectValue
+                  placeholder={
+                    categoriesLoading
+                      ? "Loading categories..."
+                      : "Select a category"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
+                {categoriesLoading ? (
+                  <SelectItem value="loading" disabled>
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading...
+                    </div>
                   </SelectItem>
-                ))}
+                ) : categories && categories.length > 0 ? (
+                  categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-categories" disabled>
+                    No categories available
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -139,12 +198,22 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
             <Button
               type="submit"
               disabled={
-                !name.trim() || !categoryId || createChannelMutation.isPending
+                !name.trim() ||
+                !categoryId ||
+                createChannelMutation.isPending ||
+                categoriesLoading ||
+                categoryId === "loading" ||
+                categoryId === "no-categories"
               }
             >
-              {createChannelMutation.isPending
-                ? "Creating..."
-                : "Create Channel"}
+              {createChannelMutation.isPending ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creating...
+                </div>
+              ) : (
+                "Create Channel"
+              )}
             </Button>
           </div>
         </form>

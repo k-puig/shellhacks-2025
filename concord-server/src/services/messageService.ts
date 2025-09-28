@@ -127,6 +127,7 @@ export async function getMessagesBefore(date: string, channelId: string) {
         userId: message.userId!,
         text: message.text,
         deleted: message.deleted,
+        createdAt: message.createdAt,
         replies: originalMessage
           ? {
               messageId: message.id,
@@ -159,7 +160,11 @@ export async function getMessagesBefore(date: string, channelId: string) {
 export async function editMessage(data: PutMessage) {
   try {
     const userCreds = await getUserCredentials(data.id);
-    if (!userCreds || userCreds.token == null || userCreds.token != data.token) {
+    if (
+      !userCreds ||
+      userCreds.token == null ||
+      userCreds.token != data.token
+    ) {
       return null;
     }
 

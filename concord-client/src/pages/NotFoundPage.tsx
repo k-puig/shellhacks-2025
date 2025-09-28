@@ -7,7 +7,7 @@ const NotFoundPage: React.FC = () => {
         <h1 className="text-4xl font-bold mb-4 text-concord-primary">404</h1>
         <p className="text-xl mb-6">Page not found</p>
         <Button asChild>
-          <a href="/channels/@me">Go Home</a>
+          <a href="/">Go Home</a>
         </Button>
       </div>
     </div>

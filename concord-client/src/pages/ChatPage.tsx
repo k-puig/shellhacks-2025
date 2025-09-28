@@ -10,7 +10,7 @@ import {
   Reply,
   Plus,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, isValid, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,10 +26,8 @@ import { useTheme } from "@/components/theme-provider";
 import { useInstanceDetails, useInstanceMembers } from "@/hooks/useServers";
 import {
   useChannelMessages,
-  useSendMessage,
-  useDeleteMessage,
-  usePinMessage,
   useLoadMoreMessages,
+  useSendMessage,
 } from "@/hooks/useMessages";
 import { useUiStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -37,8 +35,6 @@ import { Message } from "@/lib/api-client";
 
 // Modal imports
 import { MessageActionsModal } from "@/components/modals/MessageActionsModal";
-import { EditMessageModal } from "@/components/modals/EditMessageModal";
-import { PinnedMessagesModal } from "@/components/modals/PinnedMessagesModal";
 
 // User type for message component
 interface MessageUser {
@@ -57,12 +53,7 @@ interface MessageProps {
   currentUser: any;
   replyTo?: Message;
   replyToUser?: MessageUser;
-  onEdit?: (messageId: string) => void;
-  onDelete?: (messageId: string) => void;
   onReply?: (messageId: string) => void;
-  onPin?: (messageId: string) => void;
-  canDelete?: boolean;
-  canPin?: boolean;
 }
 
 const MessageComponent: React.FC<MessageProps> = ({
@@ -71,29 +62,33 @@ const MessageComponent: React.FC<MessageProps> = ({
   currentUser,
   replyTo,
   replyToUser,
-  onEdit,
-  onDelete,
   onReply,
-  onPin,
-  canDelete = false,
-  canPin = false,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showActionsModal, setShowActionsModal] = useState(false);
 
   const formatTimestamp = (timestamp: string) => {
     try {
-      const date = new Date(timestamp);
-      if (isNaN(date.getTime())) {
+      // First try parsing as ISO string
+      let date = parseISO(timestamp);
+
+      // If that fails, try regular Date constructor
+      if (!isValid(date)) {
+        date = new Date(timestamp);
+      }
+
+      // Final check if date is valid
+      if (!isValid(date)) {
+        console.error("Invalid timestamp:", timestamp);
         return "Invalid date";
       }
+
       return formatDistanceToNow(date, { addSuffix: true });
     } catch (error) {
       console.error("Error formatting timestamp:", timestamp, error);
       return "Invalid date";
     }
   };
-
   const isOwnMessage = currentUser?.id === message.userId;
   const { mode } = useTheme();
 
@@ -101,7 +96,7 @@ const MessageComponent: React.FC<MessageProps> = ({
   const username = user.username || user.userName || "Unknown User";
   const displayName = user.nickname || user.nickName || username;
 
-  const isDeleted = (message as any).deleted;
+  const isDeleted = message.deleted;
 
   if (isDeleted) {
     return (
@@ -111,13 +106,6 @@ const MessageComponent: React.FC<MessageProps> = ({
           <div className="flex-1 min-w-0">
             <div className="text-sm text-concord-secondary italic border border-border rounded px-3 py-2 bg-concord-tertiary/50">
               This message has been deleted
-              {(message as any).deletedBy && (
-                <span className="text-xs block mt-1">
-                  Deleted by {(message as any).deletedBy}
-                  {(message as any).deletedAt &&
-                    ` • ${formatTimestamp((message as any).deletedAt)}`}
-                </span>
-              )}
             </div>
           </div>
         </div>
@@ -145,6 +133,22 @@ const MessageComponent: React.FC<MessageProps> = ({
 
           {/* Message content */}
           <div className="flex-1 min-w-0">
+            {/* Reply line and reference */}
+            {replyTo && replyToUser && (
+              <div className="flex items-center gap-2 mb-2 text-xs text-concord-secondary">
+                <div className="w-6 h-3 border-l-2 border-t-2 border-concord-secondary/50 rounded-tl-md ml-2" />
+                <span className="font-medium text-concord-primary">
+                  {replyToUser.nickname ||
+                    replyToUser.nickName ||
+                    replyToUser.username ||
+                    replyToUser.userName}
+                </span>
+                <span className="truncate max-w-xs opacity-75">
+                  {replyTo.text.replace(/```[\s\S]*?```/g, "[code]")}
+                </span>
+              </div>
+            )}
+
             {/* Reply line and reference */}
             {replyTo && replyToUser && (
               <div className="flex items-center gap-2 mb-2 text-xs text-concord-secondary">
@@ -288,11 +292,7 @@ const MessageComponent: React.FC<MessageProps> = ({
         onClose={() => setShowActionsModal(false)}
         message={message}
         isOwnMessage={isOwnMessage}
-        canDelete={canDelete}
-        onEdit={onEdit}
-        onDelete={onDelete}
         onReply={onReply}
-        onPin={canPin ? onPin : undefined}
       />
     </>
   );
@@ -433,16 +433,12 @@ const ChatPage: React.FC = () => {
 
   // Local state hooks - called unconditionally
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
-  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
-  const [showPinnedMessages, setShowPinnedMessages] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesStartRef = useRef<HTMLDivElement>(null);
 
   // API mutation hooks - called unconditionally
-  const deleteMessageMutation = useDeleteMessage();
-  const pinMessageMutation = usePinMessage();
   const loadMoreMessagesMutation = useLoadMoreMessages(channelId);
 
   // Memoized values - called unconditionally
@@ -460,23 +456,16 @@ const ChatPage: React.FC = () => {
     return currentUser.roles.some((role) => role.instanceId === instanceId);
   }, [currentUser, instanceId]);
 
-  const canDeleteMessages = React.useMemo(() => {
-    if (!currentUser || !instanceId) return false;
-    if (currentUser.admin) return true;
-    const userRole = currentUser.roles.find(
-      (role) => role.instanceId === instanceId,
-    );
-    return userRole && (userRole.role === "admin" || userRole.role === "mod");
-  }, [currentUser, instanceId]);
+  const sortedMessages = React.useMemo(() => {
+    if (!channelMessages) return [];
 
-  const canPinMessages = React.useMemo(() => {
-    if (!currentUser || !instanceId) return false;
-    if (currentUser.admin) return true;
-    const userRole = currentUser.roles.find(
-      (role) => role.instanceId === instanceId,
-    );
-    return userRole && (userRole.role === "admin" || userRole.role === "mod");
-  }, [currentUser, instanceId]);
+    // Sort messages by createdAt timestamp (oldest first, newest last)
+    return [...channelMessages].sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateA - dateB; // ascending order (oldest to newest)
+    });
+  }, [channelMessages]);
 
   // Effects - called unconditionally
   useEffect(() => {
@@ -511,52 +500,6 @@ const ChatPage: React.FC = () => {
     [channelMessages],
   );
 
-  const handleEdit = React.useCallback(
-    (messageId: string) => {
-      const message = channelMessages?.find((m) => m.id === messageId);
-      if (message) {
-        setEditingMessage(message);
-      }
-    },
-    [channelMessages],
-  );
-
-  const handleDelete = React.useCallback(
-    async (messageId: string) => {
-      if (confirm("Are you sure you want to delete this message?")) {
-        try {
-          await deleteMessageMutation.mutateAsync({
-            messageId,
-            channelId: channelId!,
-          });
-        } catch (error) {
-          console.error("Failed to delete message:", error);
-        }
-      }
-    },
-    [deleteMessageMutation, channelId],
-  );
-
-  const handlePin = React.useCallback(
-    async (messageId: string) => {
-      try {
-        const message = channelMessages?.find((m) => m.id === messageId);
-        const isPinned = (message as any)?.pinned;
-
-        await pinMessageMutation.mutateAsync({
-          messageId,
-          channelId: channelId!,
-          pinned: !isPinned,
-        });
-      } catch (error) {
-        console.error("Failed to pin/unpin message:", error);
-      }
-    },
-    [pinMessageMutation, channelId, channelMessages],
-  );
-
-  // NOW WE CAN START CONDITIONAL LOGIC AND EARLY RETURNS
-
   // Handle loading states
   if (instanceLoading || messagesLoading || usersLoading) {
     return (
@@ -578,7 +521,7 @@ const ChatPage: React.FC = () => {
             Access Denied
           </h2>
           <p className="mb-4">You don't have permission to view this server.</p>
-          <Button onClick={() => navigate("/channels/@me")}>Go Home</Button>
+          <Button onClick={() => navigate("/")}>Go Home</Button>
         </div>
       </div>
     );
@@ -638,7 +581,6 @@ const ChatPage: React.FC = () => {
 
   const ChannelIcon = currentChannel?.type === "voice" ? Volume2 : Hash;
 
-  console.log(channelMessages);
   return (
     <div className="flex flex-col flex-shrink h-full bg-concord-primary">
       {/* Channel Header */}
@@ -659,14 +601,6 @@ const ChatPage: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 interactive-hover"
-            onClick={() => setShowPinnedMessages(true)}
-          >
-            <Pin size={16} />
-          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -731,12 +665,13 @@ const ChatPage: React.FC = () => {
 
           <div className="pb-4">
             {/* Messages */}
-            {channelMessages && channelMessages.length > 0 ? (
+            {sortedMessages && sortedMessages.length > 0 ? (
               <div>
-                {channelMessages.map((message) => {
+                {sortedMessages.map((message) => {
+                  console.log(message);
                   const user = users?.find((u) => u.id === message.userId);
                   const replyToMessage = channelMessages?.find(
-                    (m) => m.id === message.replyToId,
+                    (m) => m.id === (message as any).repliedMessageId,
                   );
                   const replyToUser = replyToMessage
                     ? users?.find((u) => u.id === replyToMessage.userId)
@@ -751,13 +686,8 @@ const ChatPage: React.FC = () => {
                       user={user}
                       currentUser={currentUser}
                       replyTo={replyToMessage}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
                       onReply={handleReply}
-                      onPin={handlePin}
                       replyToUser={replyToUser}
-                      canDelete={canDeleteMessages}
-                      canPin={canPinMessages}
                     />
                   );
                 })}
@@ -791,25 +721,6 @@ const ChatPage: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* Edit Message Modal */}
-      {editingMessage && (
-        <EditMessageModal
-          isOpen={!!editingMessage}
-          onClose={() => setEditingMessage(null)}
-          message={editingMessage}
-          channelId={channelId!}
-        />
-      )}
-
-      {/* Pinned Messages Modal */}
-      <PinnedMessagesModal
-        isOpen={showPinnedMessages}
-        onClose={() => setShowPinnedMessages(false)}
-        channelId={channelId!}
-        channelName={currentChannel?.name || "channel"}
-        canManagePins={canPinMessages ? canPinMessages : false}
-      />
     </div>
   );
 };
