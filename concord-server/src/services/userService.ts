@@ -256,10 +256,7 @@ export async function getAllUsersFrom(instanceId: string): Promise<
           ).includes(u.status as any)
             ? (u.status as "online" | "offline" | "dnd" | "idle" | "invis")
             : "offline",
-          role: adminRoles.map((r) => ({
-            userId: r.userId,
-            instanceId: r.instanceId,
-          })),
+          role: adminRoles,
         };
       }),
     );
