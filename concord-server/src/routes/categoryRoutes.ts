@@ -19,7 +19,7 @@ import { describeRoute, resolver } from "hono-openapi";
 const categoryRoutes = new Hono()
 
 categoryRoutes.post(
-    "/category/create",
+    "",
     describeRoute({
         description: "Create a new category",
         responses: {
@@ -121,7 +121,7 @@ categoryRoutes.get(
 );
 
 categoryRoutes.put(
-    "/category/update",
+    "",
     describeRoute({
         description: "Update an existing category",
         responses: {
@@ -164,7 +164,7 @@ categoryRoutes.put(
 );
 
 categoryRoutes.delete(
-    "/category/delete",
+    "",
     describeRoute({
         description: "Delete an existing category",
         responses: {
@@ -207,7 +207,7 @@ categoryRoutes.delete(
 )
 
 categoryRoutes.delete(
-    "/categories/delete/:id",
+    "/:id/:userId",
     describeRoute({
         description: "Delete all categories by instance id",
         responses: {
