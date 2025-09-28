@@ -2,6 +2,7 @@ import { Server, Socket } from "socket.io";
 import { getUserCredentials, getUserInformation } from "../services/userService";
 import { getAllInstances, getInstanceByChannelId, getInstancesByUserId } from "../services/instanceService";
 import { getCategoriesByInstance, getCategory, getChannel } from "../services/channelService";
+import { sendMessageToChannel } from "../services/messageService";
 
 
 
@@ -44,9 +45,61 @@ export function registerMessageHandlers(io: Server) {
             console.log(`user id ${data.userId} from socket ${socket.id} joined channel ${data.channelId}`);
         })
 
-        socket.on("send-message", (data) => {
+        socket.on("send-message", async (data) => {
             console.log("message received in handler", data)
-            socket.to(data.channelId).emit("receive-message", {userName: data.userName, message: data.context, userPFP: data.userPFP})
+
+            const payload = data as {
+                channelId: string,
+                userId: string,
+                content: string,
+                token: string,
+                repliedMessageId?: string | null,
+                userName?: string,
+                userPFP?: string,
+            } | undefined;
+
+            if (!payload || !payload.channelId || !payload.userId || !payload.content || !payload.token) {
+                const errMsg = "invalid payload for send-message";
+                socket.emit("error-channel", errMsg);
+                return;
+            }
+
+            // Persist message via service (service validates token)
+            const saved = await sendMessageToChannel(
+                payload.channelId,
+                payload.userId,
+                payload.content,
+                payload.token,
+                payload.repliedMessageId ?? null,
+            );
+
+            if (!saved) {
+                const errMsg = "failed to save message";
+                socket.emit("error-channel", errMsg);
+                return;
+            }
+
+            // Emit only to sockets tracked for this channel (do not rely on rooms)
+            const channelMembers = messagesChannelMembers.get(payload.channelId);
+            if (channelMembers && channelMembers.size > 0) {
+                for (const sock of Array.from(channelMembers.values())) {
+                    try {
+                        sock.emit("receive-message", {
+                            message: saved,
+                            userName: payload.userName,
+                            userPFP: payload.userPFP,
+                        });
+                    } catch (e) {
+                    }
+                }
+            } else {
+                // Fallback: no tracked sockets for channel, still emit via io to be safe
+                io.to(payload.channelId).emit("receive-message", {
+                    message: saved,
+                    userName: payload.userName,
+                    userPFP: payload.userPFP,
+                });
+            }
         })
 
         socket.on("delete-message", async (data) => {
@@ -99,7 +152,56 @@ export function registerMessageHandlers(io: Server) {
         })
 
         socket.on("ping-users", (data) =>{
-            socket.to(data.channelId).emit("pinged", {message: data.message})
+            const payload = data as {
+                channelId: string,
+                userId: string,
+                message: string,
+                pingType?: string,
+            } | undefined;
+
+            if (!payload || !payload.channelId || !payload.userId) {
+                socket.emit("error-channel", "invalid payload for ping-users");
+                return;
+            }
+
+            // Prefer server-side membership map so we only ping tracked sockets
+            const channelMembers = messagesChannelMembers.get(payload.channelId);
+            if (channelMembers && channelMembers.size > 0) {
+                for (const [memberId, sock] of Array.from(channelMembers.entries())) {
+                    if (memberId === payload.userId) continue; // don't ping sender
+                    try {
+                        sock.emit("pinged", {
+                            message: payload.message,
+                            from: payload.userId,
+                            pingType: payload.pingType,
+                        });
+                    } catch (e) {
+                        // ignore individual socket errors
+                    }
+                }
+                return;
+            }
+
+            // Fallback: iterate sockets in the room (exclude the sender socket)
+            try {
+                const sockets = Array.from((io as Server).sockets.sockets.values());
+                for (const sock of sockets) {
+                    try {
+                        // sock.rooms is a Set-like; check membership
+                        if ((sock as any).rooms && (sock as any).rooms.has(payload.channelId)) {
+                            if (sock.id === socket.id) continue; // exclude origin socket
+                            sock.emit("pinged", {
+                                message: payload.message,
+                                from: payload.userId,
+                                pingType: payload.pingType,
+                            });
+                        }
+                    } catch {}
+                }
+            } catch (e) {
+                // last resort: emit to the room (sender may also receive)
+                (io as Server).to(payload.channelId).emit("pinged", { message: payload.message, from: payload.userId, pingType: payload.pingType });
+            }
         })
 
     })
