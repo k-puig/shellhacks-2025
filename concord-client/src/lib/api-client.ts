@@ -8,7 +8,7 @@ export const API_BASE_URL =
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60, // 1 minute
+      staleTime: 500 * 1, // 1 minute
       refetchOnWindowFocus: true,
       retry: (failureCount, error: any) => {
         // Don't retry on auth errors

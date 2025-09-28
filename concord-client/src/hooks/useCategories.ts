@@ -10,7 +10,7 @@ export const useCategoriesByInstance = (instanceId: string | undefined) => {
         ? categoryApi.getCategoriesByInstance(instanceId)
         : Promise.resolve([]),
     enabled: !!instanceId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 500 * 1, // 5 minutes
   });
 };
 
@@ -23,7 +23,7 @@ export const useCategoryById = (categoryId: string | undefined) => {
         ? categoryApi.getCategoryById(categoryId)
         : Promise.resolve(null),
     enabled: !!categoryId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 500 * 1,
   });
 };
 

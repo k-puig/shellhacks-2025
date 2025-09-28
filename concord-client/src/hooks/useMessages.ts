@@ -23,8 +23,8 @@ export const useChannelMessages = (channelId?: string, limit = 50) => {
       }
     },
     enabled: !!channelId,
-    staleTime: 1000 * 60 * 1,
-    refetchInterval: 1000 * 30,
+    staleTime: 500 * 1,
+    refetchInterval: 500 * 1,
   });
 };
 
@@ -58,7 +58,7 @@ export const useChannelMessagesPaginated = (
       }
     },
     enabled: !!channelId && !!beforeDate,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 500 * 1,
   });
 };
 
@@ -261,7 +261,7 @@ export const usePinnedMessages = (channelId?: string) => {
       }
     },
     enabled: !!channelId,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 500 * 1,
   });
 };
 

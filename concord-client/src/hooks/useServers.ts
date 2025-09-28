@@ -58,7 +58,7 @@ export const useServers = () => {
         throw new Error("Failed to fetch servers");
       }
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 500 * 1,
   });
 };
 
@@ -113,7 +113,7 @@ export const useInstanceDetails = (instanceId?: string) => {
       }
     },
     enabled: !!instanceId,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 500 * 1,
   });
 };
 
@@ -134,7 +134,7 @@ export const useInstanceMembers = (instanceId?: string) => {
       }
     },
     enabled: !!instanceId,
-    staleTime: 1000 * 60 * 2,
+    staleTime: 500 * 1,
   });
 };
 
@@ -264,6 +264,6 @@ export const useChannels = (instanceId?: string) => {
       return instance?.categories || [];
     },
     enabled: !!instanceId && !!instance,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 500 * 1,
   });
 };
