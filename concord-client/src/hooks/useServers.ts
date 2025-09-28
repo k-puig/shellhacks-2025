@@ -1,4 +1,3 @@
-// src/hooks/useServers.ts - Fixed with proper types
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   apiClient,

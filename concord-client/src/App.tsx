@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -10,11 +10,13 @@ import LoginPage from "@/pages/LoginPage";
 import ChatPage from "@/pages/ChatPage";
 import SettingsPage from "@/pages/SettingsPage";
 import NotFoundPage from "@/pages/NotFoundPage";
+import { useVoiceStore } from "@/stores/voiceStore";
 
 import { queryClient } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/authStore";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import { Home } from "lucide-react";
+import { Socket } from "socket.io-client";
 
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
@@ -50,7 +52,16 @@ const HomePage: React.FC = () => {
   );
 };
 
-function App() {
+function App(props: { socket: Socket }) {
+  const initVoiceStore = useVoiceStore((state) => state.init);
+
+  useEffect(() => {
+    initVoiceStore(props.socket);
+    return () => {
+      useVoiceStore.getState().cleanup();
+    };
+  }, [props.socket, initVoiceStore]);
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

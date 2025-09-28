@@ -8,6 +8,7 @@ import ChannelSidebar from "@/components/layout/ChannelSidebar";
 import UserPanel from "@/components/layout/UserPanel";
 import MemberList from "@/components/layout/MemberList";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
+import VoiceConnectionManager from "@/components/voice/VoiceConnectionManager";
 
 const AppLayout: React.FC = () => {
   const { isLoading } = useAuthStore();
@@ -32,22 +33,15 @@ const AppLayout: React.FC = () => {
     );
   }
 
-  // Uncomment if auth is required
-  // if (!user) {
-  //   return (
-  //     <div className="h-screen w-screen flex items-center justify-center bg-concord-primary">
-  //       <div className="text-red-400">Authentication required</div>
-  //     </div>
-  //   );
-  // }
-
   return (
     <div className="flex h-screen overflow-hidden bg-concord-primary text-concord-primary">
+      {/* This component handles playing audio from remote users */}
+      <VoiceConnectionManager />
+
       {/* Server List Sidebar - Always visible on desktop, overlay on mobile */}
       <div className="relative w-[72px] sidebar-primary flex-shrink-0">
         <ServerSidebar />
       </div>
-
       {/* Channel Sidebar - Only shown when in a server context and not collapsed */}
       {shouldShowChannelSidebar && (
         <div
@@ -64,7 +58,6 @@ const AppLayout: React.FC = () => {
           </div>
         </div>
       )}
-
       {/* Main Content Area */}
       <div
         className={`flex-1 flex flex-col min-w-0 ${
@@ -73,7 +66,6 @@ const AppLayout: React.FC = () => {
       >
         <Outlet />
       </div>
-
       {/* Member List - Only shown when in a channel and member list is enabled */}
       {showMemberList && shouldShowChannelSidebar && (
         <div className="flex-0 sidebar-secondary order-l border-sidebar">

@@ -19,6 +19,7 @@ import {
 import { useAuthStore } from "@/stores/authStore";
 import { useUiStore } from "@/stores/uiStore";
 import { useLogout } from "@/hooks/useAuth";
+import { useVoiceStore } from "@/stores/voiceStore";
 
 // Status color utility
 const getStatusColor = (status: string) => {
@@ -211,46 +212,18 @@ const UserPanel: React.FC = () => {
   const { user } = useAuthStore();
   const { openUserSettings } = useUiStore();
 
-  const [isMuted, setIsMuted] = useState(false);
-  const [isDeafened, setIsDeafened] = useState(false);
-
-  // If no authenticated user, show login prompt
-  if (!user) {
-    return (
-      <div className="flex-shrink-0 p-2 bg-concord-tertiary border-t border-sidebar">
-        <div className="text-center text-concord-secondary text-sm">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => (window.location.href = "/login")}
-          >
-            Login Required
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const { isConnected, isMuted, isDeafened, toggleMute, toggleDeafen } =
+    useVoiceStore();
 
   const handleStatusChange = (newStatus: string) => {
     console.log("Status change to:", newStatus);
-    // TODO: Implement API call to update user status
-    // You can add a useUpdateUserStatus hook here
-  };
-
-  const handleMuteToggle = () => setIsMuted(!isMuted);
-  const handleDeafenToggle = () => {
-    const newDeafenState = !isDeafened;
-    setIsDeafened(newDeafenState);
-    if (newDeafenState) {
-      setIsMuted(true); // Deafening also mutes
-    }
   };
 
   return (
     <div className="user-panel flex items-center p-2 bg-concord-tertiary border-t border-sidebar">
       {/* User Info with Dropdown */}
       <UserStatusDropdown
-        currentStatus={user.status}
+        currentStatus={user?.status as string}
         onStatusChange={handleStatusChange}
       >
         <Button
@@ -260,23 +233,25 @@ const UserPanel: React.FC = () => {
           <UserAvatar user={user} size="md" />
           <div className="ml-2 flex-1 min-w-0 text-left">
             <div className="text-sm font-medium text-concord-primary truncate">
-              {user.nickname || user.username}
+              {user?.nickname || user?.username}
             </div>
             <div className="text-xs text-concord-secondary truncate capitalize">
-              {user.status}
+              {user?.status}
             </div>
           </div>
         </Button>
       </UserStatusDropdown>
 
       {/* Voice Controls */}
-      <VoiceControls
-        isMuted={isMuted}
-        isDeafened={isDeafened}
-        onMuteToggle={handleMuteToggle}
-        onDeafenToggle={handleDeafenToggle}
-        onSettingsClick={openUserSettings}
-      />
+      {isConnected && (
+        <VoiceControls
+          isMuted={isMuted}
+          isDeafened={isDeafened}
+          onMuteToggle={toggleMute}
+          onDeafenToggle={toggleDeafen}
+          onSettingsClick={openUserSettings}
+        />
+      )}
     </div>
   );
 };

@@ -1,4 +1,3 @@
-// src/hooks/useAuth.ts - Fixed with proper types
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/authStore";
 import {

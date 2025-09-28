@@ -1,13 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import {
-  Hash,
-  Volume2,
-  ChevronDown,
-  ChevronRight,
-  Plus,
-  Edit,
-} from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,35 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CategoryWithChannels } from "@/types/api";
 import { Channel } from "@/types/database";
-
-interface ChannelItemProps {
-  channel: Channel;
-  isActive: boolean;
-  onClick: () => void;
-}
-
-const ChannelItem: React.FC<ChannelItemProps> = ({
-  channel,
-  isActive,
-  onClick,
-}) => {
-  const Icon = channel.type === "voice" ? Volume2 : Hash;
-
-  return (
-    <Button
-      variant="ghost"
-      className={`w-full justify-start px-2 py-2 h-8 text-left font-medium p-3 rounded-lg transition-all ${
-        isActive
-          ? "border-primary bg-primary/10 border-2 "
-          : "hover:border-primary/50"
-      }`}
-      onClick={onClick}
-    >
-      <Icon size={16} className="mr-2 flex-shrink-0" />
-      <span className="truncate">{channel.name}</span>
-    </Button>
-  );
-};
+import ChannelItem from "@/components/channel/ChannelItem";
 
 interface CategoryHeaderProps {
   category: CategoryWithChannels;
@@ -110,17 +75,10 @@ interface ChannelListProps {
 }
 
 const ChannelList: React.FC<ChannelListProps> = ({ categories }) => {
-  const navigate = useNavigate();
-  const { instanceId, channelId } = useParams();
-
   // Track expanded categories
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(categories.map((cat) => cat.id)), // Start with all expanded
   );
-
-  const handleChannelClick = (channel: Channel) => {
-    navigate(`/channels/${instanceId}/${channel.id}`);
-  };
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories((prev) => {
@@ -164,12 +122,7 @@ const ChannelList: React.FC<ChannelListProps> = ({ categories }) => {
                   {category.channels
                     .sort((a, b) => a.position - b.position)
                     .map((channel) => (
-                      <ChannelItem
-                        key={channel.id}
-                        channel={channel}
-                        isActive={channelId === channel.id}
-                        onClick={() => handleChannelClick(channel)}
-                      />
+                      <ChannelItem key={channel.id} channel={channel} />
                     ))}
                 </div>
               )}
