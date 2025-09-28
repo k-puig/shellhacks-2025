@@ -1,16 +1,14 @@
-import {
-  PrismaClient,
-} from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { getUserCredentials } from "./userService";
 
 const prisma = new PrismaClient();
 
-export async function getMessageInformation(id:string): Promise<{
-  id: string,
-  channelId: string,
-  userId: string,
-  text: string,
-  deleted: boolean,
+export async function getMessageInformation(id: string): Promise<{
+  id: string;
+  channelId: string;
+  userId: string;
+  text: string;
+  deleted: boolean;
   replies: null | {
     messageId: string;
     repliesToId: string;
@@ -66,26 +64,28 @@ export async function getMessageInformation(id:string): Promise<{
     const errMessage = err as Error;
 
     if (errMessage.message === "missing messageId") {
-      console.log("services::actions::getMessageInformation - missing messageId");
+      console.log(
+        "services::actions::getMessageInformation - missing messageId",
+      );
       return null;
     }
 
     if (errMessage.message === "could not find message") {
       console.log(
-        "services::actions::getMessageInformation - unable to find message"
+        "services::actions::getMessageInformation - unable to find message",
       );
       return null;
     }
 
     console.log(
       "services::actions::getMessageInformation - unknown error",
-      errMessage
+      errMessage,
     );
     return null;
   }
 }
 
-export async function getMessagesBefore(date:string, channelId:string) {
+export async function getMessagesBefore(date: string, channelId: string) {
   try {
     if (!date || !channelId) {
       throw new Error("missing date or channelId");
@@ -141,13 +141,15 @@ export async function getMessagesBefore(date:string, channelId:string) {
     const errMessage = err as Error;
 
     if (errMessage.message === "missing date or channelId") {
-      console.log("services::actions::getMessagesBefore - missing date or channelId");
+      console.log(
+        "services::actions::getMessagesBefore - missing date or channelId",
+      );
       return null;
     }
 
     console.log(
       "services::actions::getMessagesBefore - unknown error",
-      errMessage
+      errMessage,
     );
     return null;
   }
