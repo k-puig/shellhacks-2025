@@ -6,6 +6,30 @@ import { getCategoriesByInstance, getCategory, getChannel } from "../services/ch
 // Change to Map of voiceChannelId to Map of userId to socket
 const voiceChannelMembers = new Map<string, Map<string, Socket>>();
 
+// Types for WebRTC messages
+interface WebRTCOffer {
+  targetUserId: string;
+  sdp: RTCSessionDescriptionInit;
+}
+
+interface WebRTCAnswer {
+  targetUserId: string;
+  sdp: RTCSessionDescriptionInit;
+}
+
+interface WebRTCIceCandidate {
+  targetUserId: string;
+  candidate: RTCIceCandidateInit;
+}
+
+// Future ICE server configuration
+// This can be expanded later to include TURN servers
+interface IceServerConfig {
+  urls: string | string[];
+  username?: string;
+  credential?: string;
+}
+
 export function registerVoiceHandlers(io: Server) {
   io.on("connection", (socket: Socket) => {
     // Join voice channel
@@ -61,7 +85,8 @@ export function registerVoiceHandlers(io: Server) {
       socket.join(payload.voiceChannelId);
       socket.emit("joined-voicechannel", { 
         voiceChannelId: payload.voiceChannelId,
-        connectedUserIds: Array.from(channelMembers.keys()).filter(e => e !== payload.userId)
+        connectedUserIds: Array.from(channelMembers.keys()).filter(e => e !== payload.userId),
+        iceServers: getIceServers() // Send ICE server config to client
       });
       socket.to(payload.voiceChannelId).emit("user-joined-voicechannel", { userId: payload.userId });
       
@@ -103,7 +128,7 @@ export function registerVoiceHandlers(io: Server) {
         socket.leave(payload.voiceChannelId);
         
         // Notify other users in the channel
-        socket.to(payload.voiceChannelId).emit("user-left-voicechannel", { 
+        io.to(payload.voiceChannelId).emit("user-left-voicechannel", { 
           userId: payload.userId, 
           voiceChannelId: payload.voiceChannelId 
         });
@@ -139,7 +164,7 @@ export function registerVoiceHandlers(io: Server) {
           channelMembers.delete(userId);
           
           // Notify other members
-          socket.to(voiceChannelId).emit("user-left-voicechannel", { 
+          io.to(voiceChannelId).emit("user-left-voicechannel", { 
             userId,
             voiceChannelId,
             reason: "disconnected"
@@ -160,7 +185,7 @@ export function registerVoiceHandlers(io: Server) {
               members.delete(memberId);
               
               // Notify other members
-              socket.to(channelId).emit("user-left-voicechannel", { 
+              io.to(channelId).emit("user-left-voicechannel", { 
                 userId: memberId,
                 voiceChannelId: channelId,
                 reason: "disconnected"
@@ -178,17 +203,107 @@ export function registerVoiceHandlers(io: Server) {
 
     // Handle WebRTC Offer
     socket.on("webrtc-offer", async (data) => {
-      // Implementation for handling WebRTC offer
+      const payload = data as { targetUserId: string; sdp: any };
+      const senderUserId = socket.data.userId;
+      const voiceChannelId = socket.data.currentVoiceChannelId;
+
+      if (!payload || !senderUserId || !voiceChannelId) {
+        socket.emit("error-voicechannel", "Invalid WebRTC offer payload or sender not in voice channel");
+        return;
+      }
+
+      const channelMembers = voiceChannelMembers.get(voiceChannelId);
+      const targetSocket = channelMembers?.get(payload.targetUserId);
+
+      if (targetSocket) {
+        targetSocket.emit("webrtc-offer", {
+          senderUserId: senderUserId,
+          sdp: payload.sdp
+        });
+      } else {
+        socket.emit("error-voicechannel", "Target user not found in voice channel");
+      }
     });
 
     // Handle WebRTC Answer
-    socket.on("webrtc-answer", async (data) => {
-      // Implementation for handling WebRTC answer
+    socket.on("webrtc-answer", (data: WebRTCAnswer) => {
+      const senderUserId = socket.data.userId;
+      const voiceChannelId = socket.data.currentVoiceChannelId;
+
+      if (!data || !senderUserId || !voiceChannelId) {
+        socket.emit("error-voicechannel", "Invalid WebRTC answer data");
+        return;
+      }
+
+      // Forward the answer to the target user
+      const channelMembers = voiceChannelMembers.get(voiceChannelId);
+      const targetSocket = channelMembers?.get(data.targetUserId);
+
+      if (targetSocket) {
+        targetSocket.emit("webrtc-answer", {
+          senderUserId: senderUserId,
+          sdp: data.sdp
+        });
+      } else {
+        socket.emit("error-voicechannel", "Target user not found in voice channel");
+      }
     });
 
     // Handle ICE Candidates
-    socket.on("webrtc-ice-candidate", async (data) => {
-      // Implementation for handling ICE candidates
+    socket.on("webrtc-ice-candidate", (data: WebRTCIceCandidate) => {
+      const senderUserId = socket.data.userId;
+      const voiceChannelId = socket.data.currentVoiceChannelId;
+
+      if (!data || !senderUserId || !voiceChannelId) {
+        socket.emit("error-voicechannel", "Invalid ICE candidate data");
+        return;
+      }
+
+      // Forward the ICE candidate to the target user
+      const channelMembers = voiceChannelMembers.get(voiceChannelId);
+      const targetSocket = channelMembers?.get(data.targetUserId);
+
+      if (targetSocket) {
+        targetSocket.emit("webrtc-ice-candidate", {
+          senderUserId: senderUserId,
+          candidate: data.candidate
+        });
+      } else {
+        socket.emit("error-voicechannel", "Target user not found in voice channel");
+      }
     });
   });
+}
+
+/**
+ * Get the current ICE server configuration.
+ * This function returns STUN servers and includes TURN server credentials 
+ * if they are available in the environment variables.
+ */
+function getIceServers(): IceServerConfig[] {
+  const iceServers: IceServerConfig[] = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+  ];
+
+  // Add own STUN server if configured
+  const stunServerUrl = process.env.STUN_SERVER_URL;
+  if (stunServerUrl) {
+    iceServers.push({ urls: stunServerUrl });
+  }
+
+  // Add TURN server if configured in environment variables
+  const turnServerUrl = process.env.TURN_SERVER_URL;
+  const turnUsername = process.env.TURN_SERVER_USERNAME;
+  const turnCredential = process.env.TURN_SERVER_CREDENTIAL;
+
+  if (turnServerUrl && turnUsername && turnCredential) {
+    iceServers.push({
+      urls: turnServerUrl,
+      username: turnUsername,
+      credential: turnCredential,
+    });
+  }
+
+  return iceServers;
 }

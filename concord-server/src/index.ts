@@ -13,7 +13,7 @@ const app = new Hono();
 app.use(
   "*",
   cors({
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", "https://concord.kpuig.net"],
     allowHeaders: [
       "Content-Type",
       "Authorization",
@@ -45,7 +45,7 @@ app.get("/scalar", Scalar({ url: "/openapi" }));
 // initialize socket.io server
 const io = new Server({
   cors: {
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", "https://concord.kpuig.net"],
     credentials: true,
   },
 });
@@ -67,10 +67,13 @@ export default {
     if (url.pathname === "/socket.io/") {
       const response = await engine.handleRequest(req, server);
       // Add CORS headers explicitly
-      response.headers.set(
-        "Access-Control-Allow-Origin",
-        "http://localhost:5173",
-      );
+      const origin = req.headers.get("Origin");
+      if (
+        origin &&
+        ["http://localhost:5173", "https://concord.kpuig.net"].includes(origin)
+      ) {
+        response.headers.set("Access-Control-Allow-Origin", origin);
+      }
       response.headers.set("Access-Control-Allow-Credentials", "true");
       return response;
     } else {
