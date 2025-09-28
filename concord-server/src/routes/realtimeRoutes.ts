@@ -13,7 +13,7 @@ import {
 const realtimeRoutes = new Hono();
 
 realtimeRoutes.post(
-  "message/:instanceId/:categoryId/:channelId",
+  "/message/:instanceId/:categoryId/:channelId",
   describeRoute({
     description: "Post a message to a channel",
     responses: {
@@ -70,7 +70,7 @@ realtimeRoutes.post(
         token,
         repliedMessageId: repliedMessageId ?? null,
       })
-      
+
       if (result === "event not implemented") {
         return c.json({ success: false, message: "Event not implemented or recognized" }, 400);
       }
@@ -86,3 +86,5 @@ realtimeRoutes.post(
       return c.json({ success: true, result }, 200);
   }
 );
+
+export default realtimeRoutes;
