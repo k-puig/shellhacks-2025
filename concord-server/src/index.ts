@@ -5,6 +5,7 @@ import { Server } from "socket.io";
 import routes from "./routes/index";
 import { Scalar } from "@scalar/hono-api-reference";
 import { openAPIRouteHandler } from "hono-openapi";
+import { registerSocketHandlers } from "./sockets";
 
 // Routes
 const app = new Hono();
@@ -13,7 +14,11 @@ app.use(
   "*",
   cors({
     origin: "http://localhost:5173",
-    allowHeaders: ["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
+    allowHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Access-Control-Allow-Origin",
+    ],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   }),
@@ -42,19 +47,13 @@ const io = new Server({
   cors: {
     origin: "http://localhost:5173",
     credentials: true,
-  }
+  },
 });
 const engine = new Engine();
 io.bind(engine);
 
 // Register socket.io events
-io.on("connection", (socket) => {
-  console.log("connected1");
-  socket.on("ping", (c) => {
-    console.log(c);
-    socket.emit("pong", c);
-  });
-});
+registerSocketHandlers(io);
 
 const { websocket } = engine.handler();
 
@@ -68,7 +67,10 @@ export default {
     if (url.pathname === "/socket.io/") {
       const response = await engine.handleRequest(req, server);
       // Add CORS headers explicitly
-      response.headers.set("Access-Control-Allow-Origin", "http://localhost:5173");
+      response.headers.set(
+        "Access-Control-Allow-Origin",
+        "http://localhost:5173",
+      );
       response.headers.set("Access-Control-Allow-Credentials", "true");
       return response;
     } else {
@@ -76,5 +78,5 @@ export default {
     }
   },
 
-  websocket
+  websocket,
 };
