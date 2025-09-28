@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { Socket } from "socket.io-client";
-import { BackendUser, User } from "@/types";
 
 // --- TYPE DEFINITIONS ---
 
@@ -262,9 +261,9 @@ export const useVoiceStore = create<VoiceState & VoiceActions>((set, get) => {
 
       // *** THE FIX: Send user credentials with the join request ***
       socket.emit("join-voicechannel", {
-        channelId,
-        userId,
-        token,
+        userId: userId,
+        userToken: token,
+        voiceChannelId: channelId,
       });
     },
     leaveChannel: () => {
