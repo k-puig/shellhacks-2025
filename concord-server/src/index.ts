@@ -6,53 +6,14 @@ import routes from "./routes/index";
 import { Scalar } from "@scalar/hono-api-reference";
 import { openAPIRouteHandler } from "hono-openapi";
 
-//initialize socket.io server
-const io = new Server();
-
-//initialize bun engine
-//then bind to socket.io server
-const engine = new Engine();
-io.bind(engine);
-/*
-io.on("connection", (socket) => {
-  //get userId and clientId from query params
-  const userId = socket.handshake.query.userId
-  const clientId = socket.handshake.query.clientId
-  if (!userId || Array.isArray(userId)) {
-    socket.disconnect();
-    throw new Error("Invalid user ID");
-  }
-
-  if (!clientId || Array.isArray(clientId)) {
-    socket.disconnect();
-    throw new Error("Invalid client ID");
-  }
-
-
-  socket.join(userId);
-  console.log(
-    `User ${userId} connected. Client ID ${clientId} on socket ${socket.id}`,
-  )
-
-  socket.on("disconnect", () => {
-    console.log(`User ${userId} disconnected from socket ${socket.id}`);
-  })
-});
-*/
-
-io.on("ping", (socket) => {
-  console.log(`New client connected: ${socket.id}`)
-  socket.emit("pong", socket. )
-})
-
-
+// Routes
 const app = new Hono();
 
 app.use(
   "*",
   cors({
     origin: "http://localhost:5173",
-    allowHeaders: ["Content-Type", "Authorization"],
+    allowHeaders: ["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   }),
@@ -76,4 +37,44 @@ app.get(
 
 app.get("/scalar", Scalar({ url: "/openapi" }));
 
-export default app;
+// initialize socket.io server
+const io = new Server({
+  cors: {
+    origin: "http://localhost:5173",
+    credentials: true,
+  }
+});
+const engine = new Engine();
+io.bind(engine);
+
+// Register socket.io events
+io.on("connection", (socket) => {
+  console.log("connected1");
+  socket.on("ping", (c) => {
+    console.log(c);
+    socket.emit("pong", c);
+  });
+});
+
+const { websocket } = engine.handler();
+
+export default {
+  port: 3000,
+  idleTimeout: 30, // must be greater than the "pingInterval" option of the engine, which defaults to 25 seconds
+
+  async fetch(req: Request, server: Bun.Server) {
+    const url = new URL(req.url);
+
+    if (url.pathname === "/socket.io/") {
+      const response = await engine.handleRequest(req, server);
+      // Add CORS headers explicitly
+      response.headers.set("Access-Control-Allow-Origin", "http://localhost:5173");
+      response.headers.set("Access-Control-Allow-Credentials", "true");
+      return response;
+    } else {
+      return app.fetch(req, server);
+    }
+  },
+
+  websocket
+};
