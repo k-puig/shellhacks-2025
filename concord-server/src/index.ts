@@ -13,11 +13,11 @@ const io = new Server();
 //then bind to socket.io server
 const engine = new Engine();
 io.bind(engine);
-
+/*
 io.on("connection", (socket) => {
   //get userId and clientId from query params
-  const userId = socket.handshake.query.userId;
-  const clientId = socket.handshake.query.clientId;
+  const userId = socket.handshake.query.userId
+  const clientId = socket.handshake.query.clientId
   if (!userId || Array.isArray(userId)) {
     socket.disconnect();
     throw new Error("Invalid user ID");
@@ -28,15 +28,23 @@ io.on("connection", (socket) => {
     throw new Error("Invalid client ID");
   }
 
+
   socket.join(userId);
   console.log(
     `User ${userId} connected. Client ID ${clientId} on socket ${socket.id}`,
-  );
+  )
 
   socket.on("disconnect", () => {
     console.log(`User ${userId} disconnected from socket ${socket.id}`);
-  });
+  })
 });
+*/
+
+io.on("ping", (socket) => {
+  console.log(`New client connected: ${socket.id}`)
+  socket.emit("pong", socket. )
+})
+
 
 const app = new Hono();
 
