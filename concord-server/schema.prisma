@@ -89,7 +89,6 @@ model Channel {
 model ChannelPin {
   messageId String @unique
   channelId String @unique
-
   Message   Message  @relation(fields: [messageId], references: [id])
   Channel   Channel  @relation(fields: [channelId], references: [id])
   createdAt DateTime @default(now())
