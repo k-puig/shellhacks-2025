@@ -52,5 +52,5 @@ export type GetChannelsByCategoryIdInput = z.infer<
 export type UpdateChannelInput = z.infer<typeof updateChannelSchema>;
 export type DeleteChannelInput = z.infer<typeof deleteChannelSchema>;
 export type DeleteChannelsByCategoryIdInput = z.infer<
-typeof deleteChannelsByCategoryIdSchema
+  typeof deleteChannelsByCategoryIdSchema
 >;
