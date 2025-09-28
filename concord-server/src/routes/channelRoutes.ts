@@ -28,8 +28,9 @@ import { describeRoute, resolver } from "hono-openapi";
 
 const channelRoutes = new Hono()
 
+// Create a new channel
 channelRoutes.post(
-    "/channel/create",
+    "/",
     describeRoute({
         description: "Create a new channel",
         responses: {
@@ -71,6 +72,7 @@ channelRoutes.post(
     }
 )
 
+// Get a channel by ID
 channelRoutes.get(
     "/:id",
     describeRoute({
@@ -101,8 +103,9 @@ channelRoutes.get(
     }
 );
 
+// Get all channels by category ID
 channelRoutes.get(
-    "",
+    "/category/:categoryId",
     describeRoute({
         description: "Get all channels by category id",
         responses: {
@@ -112,15 +115,20 @@ channelRoutes.get(
                     "application/json": { schema: resolver(getChannelsByCategoryIdSchema) },
                 },
             },
+            400: {
+                description: "Bad Request - Missing category ID",
+                content: {
+                    "application/json": { schema: resolver(getChannelsByCategoryIdSchema) },
+                },
+            },
         },
     }),
-    zValidator("query", getChannelsByCategoryIdSchema),
     async (c) => {
-        const categoryId = c.req.query("categoryId");
+        const categoryId = c.req.param("categoryId");
         if (!categoryId) {
             return c.json({ error: "No category id provided" }, 400);
         }
-
+        
         const channels = await fetchChannelsByCategory(categoryId);
         if (channels) {
             return c.json(channels);
@@ -130,8 +138,9 @@ channelRoutes.get(
     }
 );
 
+// Update a channel
 channelRoutes.put(
-    "/channel/update",
+    "/:id",
     describeRoute({
         description: "Update an existing channel",
         responses: {
@@ -163,7 +172,19 @@ channelRoutes.put(
     }),
     zValidator("json", updateChannelSchema),
     async (c) => {
+        const id = c.req.param("id");
         const data = c.req.valid("json") as UpdateChannelInput;
+        
+        // Ensure the ID in the path matches the one in the body
+        if (data.id && data.id !== id) {
+            return c.json({ error: "ID in path does not match ID in body" }, 400);
+        }
+        
+        // Set ID from path if not in body
+        if (!data.id) {
+            data.id = id;
+        }
+        
         const result = await updateExistingChannel(data);
         if (result) {
             return c.json(result);
@@ -173,8 +194,9 @@ channelRoutes.put(
     }
 );
 
+// Delete a specific channel
 channelRoutes.delete(
-    "/channel/delete",
+    "/:id",
     describeRoute({
         description: "Delete an existing channel",
         responses: {
@@ -206,7 +228,14 @@ channelRoutes.delete(
     }),
     zValidator("json", deleteChannelSchema),
     async (c) => {
+        const id = c.req.param("id");
         const data = c.req.valid("json") as DeleteChannelInput;
+        
+        // Ensure the ID in the path matches the one in the body
+        if (data.id !== id) {
+            return c.json({ error: "ID in path does not match ID in body" }, 400);
+        }
+        
         const result = await deleteExistingChannel(data);
         if (result) {
             return c.json({ success: true });
@@ -216,8 +245,9 @@ channelRoutes.delete(
     }
 );
 
+// Delete all channels by category ID
 channelRoutes.delete(
-    "/channels/delete-by-category",
+    "/category/:categoryId",
     describeRoute({
         description: "Delete all channels by category id",
         responses: {
@@ -249,7 +279,14 @@ channelRoutes.delete(
     }),
     zValidator("json", deleteChannelsByCategoryIdSchema),
     async (c) => {
+        const categoryId = c.req.param("categoryId");
         const data = c.req.valid("json") as DeleteChannelsByCategoryIdInput;
+        
+        // Ensure the categoryId in the path matches the one in the body
+        if (data.categoryId !== categoryId) {
+            return c.json({ error: "Category ID in path does not match Category ID in body" }, 400);
+        }
+        
         const result = await deleteAllChannelsByCategory(data);
         if (result) {
             return c.json({ success: true });
@@ -259,6 +296,4 @@ channelRoutes.delete(
     }
 )
 
-
-
-export default channelRoutes ;
+export { channelRoutes };

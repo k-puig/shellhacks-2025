@@ -9,8 +9,16 @@ import {
 
 import {
     createCategorySchema,
+    getCategorySchema,
+    getCategoriesByInstanceIdSchema,
+    updateCategorySchema,
+    deleteCategorySchema,
+    deleteCategoriesByInstanceIdSchema,
     CreateCategoryInput,
+    GetCategoryInput,
+    GetCategoriesByInstanceIdInput,
     UpdateCategoryInput,
+    DeleteCategoryInput,
     DeleteCategoriesByInstanceIdInput,
 } from "../validators/categoryValidator";
 import { zValidator } from "@hono/zod-validator";
@@ -18,8 +26,9 @@ import { Hono } from "hono";
 import { describeRoute, resolver } from "hono-openapi";
 const categoryRoutes = new Hono()
 
+// Create a new category
 categoryRoutes.post(
-    "",
+    "/",
     describeRoute({
         description: "Create a new category",
         responses: {
@@ -61,6 +70,7 @@ categoryRoutes.post(
     }
 )
 
+// Get a category by ID
 categoryRoutes.get(
     "/:id",
     describeRoute({
@@ -69,13 +79,13 @@ categoryRoutes.get(
             200: {
                 description: "Success getting category",
                 content: {
-                    "application/json": { schema: resolver(createCategorySchema) },
+                    "application/json": { schema: resolver(getCategorySchema) },
                 },
             },
             404: {
                 description: "Category id not found",
                 content: {
-                    "application/json": { schema: resolver(createCategorySchema) },
+                    "application/json": { schema: resolver(getCategorySchema) },
                 },
             },
         },
@@ -91,26 +101,32 @@ categoryRoutes.get(
     }
 );
 
+// Get all categories by instance ID
 categoryRoutes.get(
-    "",
+    "/instance/:instanceId",
     describeRoute({
         description: "Get all categories by instance id",
         responses: {
             200: {
                 description: "Success getting all categories in instance",
                 content: {
-                    "application/json": { schema: resolver(createCategorySchema) },
+                    "application/json": { schema: resolver(getCategoriesByInstanceIdSchema) },
+                },
+            },
+            400: {
+                description: "Bad Request - Missing instance ID",
+                content: {
+                    "application/json": { schema: resolver(getCategoriesByInstanceIdSchema) },
                 },
             },
         },
     }),
-    zValidator("query", createCategorySchema),
     async (c) => {
-        const instanceId = c.req.query("instanceId");
+        const instanceId = c.req.param("instanceId");
         if (!instanceId) {
             return c.json({ error: "No instance id provided" }, 400);
         }
-
+        
         const categoryData = await fetchCategoriesByInstance(instanceId);
         if (categoryData) {
             return c.json(categoryData);
@@ -120,40 +136,53 @@ categoryRoutes.get(
     }
 );
 
+// Update a category
 categoryRoutes.put(
-    "",
+    "/:id",
     describeRoute({
         description: "Update an existing category",
         responses: {
             200: {
                 description: "Success updating category",
                 content: {
-                    "application/json": { schema: resolver(createCategorySchema) },
+                    "application/json": { schema: resolver(updateCategorySchema) },
                 },
             },
             400: {
                 description: "Bad Request - Invalid input data",
                 content: {
-                    "application/json": { schema: resolver(createCategorySchema)},
+                    "application/json": { schema: resolver(updateCategorySchema)},
                 },
             },
             401: {
                 description: "Unauthorized - Admin access required",
                 content: {
-                    "application/json": { schema: resolver(createCategorySchema)},
+                    "application/json": { schema: resolver(updateCategorySchema)},
                 },
             },
             404: {
                 description: "Category id or User Id not found",
                 content: { 
-                    "application/json": { schema: resolver(createCategorySchema)},
+                    "application/json": { schema: resolver(updateCategorySchema)},
                 },
             },
         },
     }),
-    zValidator("json", createCategorySchema),
+    zValidator("json", updateCategorySchema),
     async (c) => {
+        const id = c.req.param("id");
         const data = c.req.valid("json") as UpdateCategoryInput;
+        
+        // Ensure the ID in the path matches the one in the body
+        if (data.id && data.id !== id) {
+            return c.json({ error: "ID in path does not match ID in body" }, 400);
+        }
+        
+        // Set ID from path if not in body
+        if (!data.id) {
+            data.id = id;
+        }
+        
         const categoryData = await updateExistingCategory(data);
         if (categoryData) {
             return c.json(categoryData);
@@ -163,40 +192,48 @@ categoryRoutes.put(
     }
 );
 
+// Delete a specific category
 categoryRoutes.delete(
-    "",
+    "/:id",
     describeRoute({
         description: "Delete an existing category",
         responses: {
             200: {
                 description: "Success deleting category",
                 content: {
-                    "application/json": { schema: resolver(createCategorySchema) },
+                    "application/json": { schema: resolver(deleteCategorySchema) },
                 },
             },
             400: {
                 description: "Bad Request - Invalid input data",
                 content: {
-                    "application/json": { schema: resolver(createCategorySchema)},
+                    "application/json": { schema: resolver(deleteCategorySchema)},
                 },
             },
             401: {
                 description: "Unauthorized - Admin access required",
                 content: {
-                    "application/json": { schema: resolver(createCategorySchema)},
+                    "application/json": { schema: resolver(deleteCategorySchema)},
                 },
             },
             404: {
                 description: "Category id or User Id not found",
                 content: { 
-                    "application/json": { schema: resolver(createCategorySchema)},
+                    "application/json": { schema: resolver(deleteCategorySchema)},
                 },
             },
         },
     }),
-    zValidator("json", createCategorySchema),
+    zValidator("json", deleteCategorySchema),
     async (c) => {
-        const data = c.req.valid("json") as UpdateCategoryInput;
+        const id = c.req.param("id");
+        const data = c.req.valid("json") as DeleteCategoryInput;
+        
+        // Ensure the ID in the path matches the one in the body
+        if (data.id !== id) {
+            return c.json({ error: "ID in path does not match ID in body" }, 400);
+        }
+        
         const categoryData = await deleteExistingCategory(data);
         if (categoryData) {
             return c.json(categoryData);
@@ -206,40 +243,48 @@ categoryRoutes.delete(
     }
 )
 
+// Delete all categories by instance ID
 categoryRoutes.delete(
-    "/:id/:userId",
+    "/instance/:instanceId",
     describeRoute({
         description: "Delete all categories by instance id",
         responses: {
             200: {
                 description: "Success deleting all categories in instance",
                 content: {
-                    "application/json": { schema: resolver(createCategorySchema) },
+                    "application/json": { schema: resolver(deleteCategoriesByInstanceIdSchema) },
                 },
             },
             400: {
                 description: "Bad Request - Invalid input data",
                 content: {
-                    "application/json": { schema: resolver(createCategorySchema)},
+                    "application/json": { schema: resolver(deleteCategoriesByInstanceIdSchema)},
                 },
             },
             401: {
                 description: "Unauthorized - Admin access required",
                 content: {
-                    "application/json": { schema: resolver(createCategorySchema)},
+                    "application/json": { schema: resolver(deleteCategoriesByInstanceIdSchema)},
                 },
             },
             404: {
                 description: "Instance id or User Id not found",
                 content: { 
-                    "application/json": { schema: resolver(createCategorySchema)},
+                    "application/json": { schema: resolver(deleteCategoriesByInstanceIdSchema)},
                 },
             },
         },
     }),
-    zValidator("json", createCategorySchema),
+    zValidator("json", deleteCategoriesByInstanceIdSchema),
     async (c) => {
+        const instanceId = c.req.param("instanceId");
         const data = c.req.valid("json") as DeleteCategoriesByInstanceIdInput;
+        
+        // Ensure the instanceId in the path matches the one in the body
+        if (data.instanceId !== instanceId) {
+            return c.json({ error: "Instance ID in path does not match Instance ID in body" }, 400);
+        }
+        
         const categoryData = await deleteAllCategoriesByInstance(data);
         if (categoryData) {
             return c.json(categoryData);
@@ -248,7 +293,5 @@ categoryRoutes.delete(
         }
     }   
 )
-
-
 
 export { categoryRoutes };
