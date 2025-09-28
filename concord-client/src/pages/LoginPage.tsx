@@ -10,13 +10,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuthStore } from "@/stores/authStore";
+import { useLogin } from "@/hooks/useAuth";
 
 const LoginPage: React.FC = () => {
-  const { isAuthenticated, setAuth } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+
+  // Use the real login hook
+  const { mutate: login, isPending, error } = useLogin();
 
   // Redirect if already authenticated
   if (isAuthenticated) {
@@ -25,35 +29,12 @@ const LoginPage: React.FC = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
 
-    try {
-      // TODO: Replace with actual login API call
-      setTimeout(() => {
-        setAuth(
-          {
-            id: "1",
-            username,
-            nickname: username,
-            bio: "Test user",
-            picture: "",
-            banner: "",
-            hashPassword: "",
-            admin: false,
-            status: "online",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            roles: [],
-          },
-          "fake-token",
-          "fake-refresh-token",
-        );
-        setIsLoading(false);
-      }, 1000);
-    } catch (error) {
-      console.error("Login failed:", error);
-      setIsLoading(false);
+    if (!username.trim() || !password.trim()) {
+      return;
     }
+
+    login({ username: username.trim(), password });
   };
 
   return (
@@ -69,6 +50,16 @@ const LoginPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  {error instanceof Error
+                    ? error.message
+                    : "Login failed. Please try again."}
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="username" className="text-concord-primary">
                 Username
@@ -80,9 +71,11 @@ const LoginPage: React.FC = () => {
                 onChange={(e) => setUsername(e.target.value)}
                 className="bg-concord-tertiary border-concord text-concord-primary"
                 placeholder="Enter your username"
+                disabled={isPending}
                 required
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="password" className="text-concord-primary">
                 Password
@@ -94,11 +87,17 @@ const LoginPage: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 className="bg-concord-tertiary border-concord text-concord-primary"
                 placeholder="Enter your password"
+                disabled={isPending}
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Logging in..." : "Log In"}
+
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isPending || !username.trim() || !password.trim()}
+            >
+              {isPending ? "Logging in..." : "Log In"}
             </Button>
           </form>
         </CardContent>

@@ -64,6 +64,39 @@ export async function createUser(data: CreateUserInput): Promise<{
   return userData;
 }
 
+export async function getUserId(
+  username: string,
+): Promise<{ userId: string } | null> {
+  try {
+    if (!username) throw new Error("missing username");
+
+    const user = await prisma.user.findFirst({
+      where: {
+        username: username,
+      },
+    });
+
+    if (!user) throw new Error("could not find user");
+
+    return {
+      userId: user.id,
+    };
+  } catch (err) {
+    const errMessage = err as Error;
+
+    if (errMessage.message === "missing username") {
+      console.log("services::actions::getUserId - no username given");
+      return null;
+    }
+    if (errMessage.message === "could not find user") {
+      console.log("services::actions::getUserId - unable to find user");
+      return null;
+    }
+    console.log("services::actions::getUserId - unknown error");
+    return null;
+  }
+}
+
 export async function getUserCredentials(userId: string): Promise<{
   userId: string;
   password: string;

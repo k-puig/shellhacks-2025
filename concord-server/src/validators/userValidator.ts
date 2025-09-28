@@ -4,6 +4,10 @@ export const queryUserByIdSchema = z.object({
   id: z.uuidv7(),
 });
 
+export const queryUserByUsernameSchema = z.object({
+  username: z.string().min(3).max(30),
+});
+
 export const queryAllUsersByInstanceId = z.object({
   instanceId: z.uuidv7(),
 });

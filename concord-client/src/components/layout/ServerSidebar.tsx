@@ -10,32 +10,43 @@ import {
 } from "@/components/ui/tooltip";
 import { useServers } from "@/hooks/useServers";
 import { useUiStore } from "@/stores/uiStore";
+import { useAuthStore } from "@/stores/authStore";
 import ServerIcon from "@/components/server/ServerIcon";
+import { getAccessibleInstances, isGlobalAdmin } from "@/utils/permissions";
 
 const ServerSidebar: React.FC = () => {
   const navigate = useNavigate();
   const { instanceId } = useParams();
-  const { data: servers, isLoading } = useServers();
+  const { data: allServers = [], isLoading } = useServers();
   const { openCreateServer, setActiveInstance, getSelectedChannelForInstance } =
     useUiStore();
+  const { user: currentUser } = useAuthStore();
+
+  // Filter servers based on user permissions
+  const accessibleServers = getAccessibleInstances(currentUser, allServers);
+  const canCreateServer = isGlobalAdmin(currentUser);
 
   const handleServerClick = (serverId: string) => {
     setActiveInstance(serverId);
     const lastChannelId = getSelectedChannelForInstance(serverId);
 
-    console.log(servers);
-
     if (lastChannelId) {
       navigate(`/channels/${serverId}/${lastChannelId}`);
     } else {
       // Fallback: navigate to the server, let the page component handle finding a channel
-      // A better UX would be to find and navigate to the first channel here.
       navigate(`/channels/${serverId}`);
     }
   };
+
   const handleHomeClick = () => {
     setActiveInstance(null);
     navigate("/channels/@me");
+  };
+
+  const handleCreateServer = () => {
+    if (canCreateServer) {
+      openCreateServer();
+    }
   };
 
   return (
@@ -47,8 +58,10 @@ const ServerSidebar: React.FC = () => {
             <Button
               variant="ghost"
               size="icon"
-              className={` w-12 h-12 ml-0 ${
-                !instanceId || instanceId === "@me" ? "active" : ""
+              className={`w-12 h-12 ml-0 rounded-2xl hover:rounded-xl transition-all duration-200 ${
+                !instanceId || instanceId === "@me"
+                  ? "bg-primary text-primary-foreground rounded-xl"
+                  : "hover:bg-primary/10"
               }`}
               onClick={handleHomeClick}
             >
@@ -56,7 +69,7 @@ const ServerSidebar: React.FC = () => {
             </Button>
           </TooltipTrigger>
           <TooltipContent side="right">
-            <p>Direct Messages</p>
+            <p>{isGlobalAdmin(currentUser) ? "Admin Dashboard" : "Home"}</p>
           </TooltipContent>
         </Tooltip>
 
@@ -69,8 +82,8 @@ const ServerSidebar: React.FC = () => {
             <div className="flex items-center justify-center py-4">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
             </div>
-          ) : (
-            servers?.map((server) => (
+          ) : accessibleServers.length > 0 ? (
+            accessibleServers.map((server) => (
               <Tooltip key={server.id}>
                 <TooltipTrigger asChild>
                   <div>
@@ -86,25 +99,43 @@ const ServerSidebar: React.FC = () => {
                 </TooltipContent>
               </Tooltip>
             ))
-          )}
+          ) : currentUser ? (
+            <div className="text-center py-4 px-2">
+              <div className="text-xs text-concord-secondary mb-2">
+                No servers available
+              </div>
+              {canCreateServer && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={handleCreateServer}
+                >
+                  Create One
+                </Button>
+              )}
+            </div>
+          ) : null}
         </div>
 
-        {/* Add Server Button */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-12 h-12 ml-3 rounded-2xl hover:rounded-xl bg-concord-secondary hover:bg-green-600 text-green-500 hover:text-white transition-all duration-200"
-              onClick={openCreateServer}
-            >
-              <Plus size={24} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            <p>Add a Server</p>
-          </TooltipContent>
-        </Tooltip>
+        {/* Add Server Button - Only show if user can create servers */}
+        {canCreateServer && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-12 h-12 ml-3 rounded-2xl hover:rounded-xl bg-concord-secondary hover:bg-green-600 text-green-500 hover:text-white transition-all duration-200"
+                onClick={handleCreateServer}
+              >
+                <Plus size={24} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>Add a Server</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
     </TooltipProvider>
   );

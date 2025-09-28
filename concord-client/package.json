@@ -24,6 +24,7 @@
     "@tailwindcss/vite": "^4.1.13",
     "@tanstack/react-query": "^5.90.2",
     "@tanstack/react-query-devtools": "^5.90.2",
+    "bcrypt": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -40,6 +41,8 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/bun": "^1.2.22",
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",
     "@types/react-syntax-highlighter": "^15.5.13",

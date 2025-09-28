@@ -18,7 +18,7 @@ import {
 
 import { useAuthStore } from "@/stores/authStore";
 import { useUiStore } from "@/stores/uiStore";
-import { SAMPLE_USERS } from "@/hooks/useServers";
+import { useLogout } from "@/hooks/useAuth";
 
 // Status color utility
 const getStatusColor = (status: string) => {
@@ -46,6 +46,8 @@ const UserStatusDropdown: React.FC<UserStatusDropdownProps> = ({
   onStatusChange,
   children,
 }) => {
+  const { mutate: logout } = useLogout();
+
   const statusOptions = [
     { value: "online", label: "Online", color: "bg-status-online" },
     { value: "away", label: "Away", color: "bg-status-away" },
@@ -79,7 +81,7 @@ const UserStatusDropdown: React.FC<UserStatusDropdownProps> = ({
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => useAuthStore.getState().logout()}
+          onClick={() => logout()}
           className="text-destructive focus:text-destructive"
         >
           Log Out
@@ -212,12 +214,19 @@ const UserPanel: React.FC = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
 
-  const displayUser = user || SAMPLE_USERS.find((u) => u.id === "current");
-
-  if (!displayUser) {
+  // If no authenticated user, show login prompt
+  if (!user) {
     return (
-      <div className="flex-shrink-0 p-2 bg-concord-tertiary">
-        <div className="text-concord-secondary text-sm">No user data</div>
+      <div className="flex-shrink-0 p-2 bg-concord-tertiary border-t border-sidebar">
+        <div className="text-center text-concord-secondary text-sm">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => (window.location.href = "/login")}
+          >
+            Login Required
+          </Button>
+        </div>
       </div>
     );
   }
@@ -225,6 +234,7 @@ const UserPanel: React.FC = () => {
   const handleStatusChange = (newStatus: string) => {
     console.log("Status change to:", newStatus);
     // TODO: Implement API call to update user status
+    // You can add a useUpdateUserStatus hook here
   };
 
   const handleMuteToggle = () => setIsMuted(!isMuted);
@@ -240,20 +250,20 @@ const UserPanel: React.FC = () => {
     <div className="user-panel flex items-center p-2 bg-concord-tertiary border-t border-sidebar">
       {/* User Info with Dropdown */}
       <UserStatusDropdown
-        currentStatus={displayUser.status}
+        currentStatus={user.status}
         onStatusChange={handleStatusChange}
       >
         <Button
           variant="ghost"
           className="flex-1 flex items-center h-auto p-1 rounded-md hover:bg-concord-secondary"
         >
-          <UserAvatar user={displayUser} size="md" />
+          <UserAvatar user={user} size="md" />
           <div className="ml-2 flex-1 min-w-0 text-left">
             <div className="text-sm font-medium text-concord-primary truncate">
-              {displayUser.nickname || displayUser.username}
+              {user.nickname || user.username}
             </div>
             <div className="text-xs text-concord-secondary truncate capitalize">
-              {displayUser.status}
+              {user.status}
             </div>
           </div>
         </Button>

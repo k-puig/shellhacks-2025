@@ -2,6 +2,7 @@ import {
   getAllUsersFrom,
   getUserInformation,
   createUser,
+  getUserId,
 } from "../services/userService";
 import { CreateUserInput } from "../validators/userValidator";
 
@@ -15,4 +16,8 @@ export async function fetchAllUsers(instanceId: string) {
 
 export async function createNewUser(data: CreateUserInput) {
   return await createUser(data);
+}
+
+export async function fetchUserId(username: string) {
+  return await getUserId(username);
 }

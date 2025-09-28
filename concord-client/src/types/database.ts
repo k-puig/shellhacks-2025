@@ -28,14 +28,15 @@ export interface Channel {
   updatedAt: string;
 }
 
+export type UserStatus = "online" | "away" | "busy" | "offline";
 export interface User {
   id: string;
   username: string;
-  nickname?: string;
-  bio?: string;
+  nickname?: string | null;
+  bio?: string | null;
   picture?: string | null;
   banner?: string | null;
-  hashPassword: string; // Won't be sent to client
+  hashPassword: string;
   admin: boolean;
   status: "online" | "away" | "busy" | "offline";
   createdAt: string;

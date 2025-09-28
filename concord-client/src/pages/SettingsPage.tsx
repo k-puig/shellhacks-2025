@@ -7,10 +7,10 @@ import {
   Mic,
   Settings,
   ChevronRight,
-  Eye,
   Moon,
   Sun,
   Monitor,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ThemeSelector } from "@/components/theme-selector";
 import { useTheme } from "@/components/theme-provider";
 import { useAuthStore } from "@/stores/authStore";
@@ -45,6 +46,12 @@ const SETTINGS_SECTIONS: SettingsSection[] = [
     description: "Profile, privacy, and account settings",
   },
   {
+    id: "security",
+    title: "Security",
+    icon: Lock,
+    description: "Password and security settings",
+  },
+  {
     id: "appearance",
     title: "Appearance",
     icon: Palette,
@@ -58,6 +65,389 @@ const SETTINGS_SECTIONS: SettingsSection[] = [
   },
 ];
 
+const SecuritySettings: React.FC = () => {
+  const { user } = useAuthStore();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess("");
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError("All password fields are required");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords do not match");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setPasswordError("New password must be at least 8 characters long");
+      return;
+    }
+
+    setIsChangingPassword(true);
+
+    try {
+      // TODO: Implement actual password change API call
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
+
+      console.log("Changing password for user:", user?.id);
+      // const result = await authClient.changePassword({
+      //   userId: user.id,
+      //   currentPassword,
+      //   newPassword,
+      //   token: authStore.token
+      // });
+
+      setPasswordSuccess("Password changed successfully");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error) {
+      setPasswordError(
+        "Failed to change password. Please check your current password.",
+      );
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6 flex flex-col justify-center self-center items-stretch w-2/3">
+      <Card className="w-full p-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Lock className="h-5 w-5" />
+            Change Password
+          </CardTitle>
+          <CardDescription>
+            Update your password to keep your account secure.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {passwordError && (
+            <Alert variant="destructive">
+              <AlertDescription>{passwordError}</AlertDescription>
+            </Alert>
+          )}
+
+          {passwordSuccess && (
+            <Alert>
+              <AlertDescription>{passwordSuccess}</AlertDescription>
+            </Alert>
+          )}
+
+          <form onSubmit={handlePasswordChange} className="space-y-4">
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="current-password">Current Password</Label>
+                <Input
+                  id="current-password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="max-w-sm"
+                  required
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="max-w-sm"
+                  minLength={8}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Must be at least 8 characters long
+                </p>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="confirm-password">Confirm New Password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="max-w-sm"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <Button
+                type="submit"
+                disabled={
+                  isChangingPassword ||
+                  !currentPassword ||
+                  !newPassword ||
+                  !confirmPassword
+                }
+              >
+                {isChangingPassword
+                  ? "Changing Password..."
+                  : "Change Password"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card className="w-full p-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Security Options
+          </CardTitle>
+          <CardDescription>
+            Additional security features for your account.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-base font-medium">
+                Two-Factor Authentication
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Add an extra layer of security to your account
+              </p>
+            </div>
+            <Switch
+              checked={twoFactorEnabled}
+              onCheckedChange={setTwoFactorEnabled}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label className="text-base font-medium">Active Sessions</Label>
+            <p className="text-sm text-muted-foreground mb-4">
+              Manage devices that are currently logged into your account
+            </p>
+            <Button variant="outline" size="sm">
+              View Active Sessions
+            </Button>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label className="text-base font-medium">Account Backup</Label>
+            <p className="text-sm text-muted-foreground mb-4">
+              Download a copy of your account data
+            </p>
+            <Button variant="outline" size="sm">
+              Request Data Export
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+const AccountSettings: React.FC = () => {
+  const { user, updateUser } = useAuthStore();
+  const [username, setUsername] = useState(user?.username || "");
+  const [nickname, setNickname] = useState(user?.nickname || "");
+  const [bio, setBio] = useState(user?.bio || "");
+  const [isChanged, setIsChanged] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [saveSuccess, setSaveSuccess] = useState("");
+
+  const handleSave = async () => {
+    setSaveError("");
+    setSaveSuccess("");
+    setIsSaving(true);
+
+    try {
+      // TODO: Implement actual profile update API call
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
+
+      console.log("Updating profile:", { username, nickname, bio });
+      // const updatedUser = await userClient.updateProfile({
+      //   userId: user.id,
+      //   username: username.trim(),
+      //   nickname: nickname.trim() || null,
+      //   bio: bio.trim() || null,
+      //   token: authStore.token
+      // });
+
+      // Update local state
+      updateUser({
+        username: username.trim(),
+        nickname: nickname.trim() || null,
+        bio: bio.trim() || null,
+      });
+
+      setSaveSuccess("Profile updated successfully");
+      setIsChanged(false);
+    } catch (error) {
+      setSaveError("Failed to update profile. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleChange = () => {
+    setIsChanged(true);
+    setSaveError("");
+    setSaveSuccess("");
+  };
+
+  return (
+    <div className="space-y-6 flex flex-col justify-center self-center items-stretch w-2/3">
+      <Card className="w-full p-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Profile
+          </CardTitle>
+          <CardDescription>
+            Update your profile information and display settings.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {saveError && (
+            <Alert variant="destructive">
+              <AlertDescription>{saveError}</AlertDescription>
+            </Alert>
+          )}
+
+          {saveSuccess && (
+            <Alert>
+              <AlertDescription>{saveSuccess}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  handleChange();
+                }}
+                className="max-w-sm"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="nickname">Display Name</Label>
+              <Input
+                id="nickname"
+                value={nickname}
+                onChange={(e) => {
+                  setNickname(e.target.value);
+                  handleChange();
+                }}
+                className="max-w-sm"
+                placeholder="How others see your name"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="bio">Bio</Label>
+              <Input
+                id="bio"
+                value={bio}
+                onChange={(e) => {
+                  setBio(e.target.value);
+                  handleChange();
+                }}
+                className="max-w-sm"
+                placeholder="Tell others about yourself"
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 flex gap-2">
+            <Button onClick={handleSave} disabled={!isChanged || isSaving}>
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
+            {isChanged && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setUsername(user?.username || "");
+                  setNickname(user?.nickname || "");
+                  setBio(user?.bio || "");
+                  setIsChanged(false);
+                  setSaveError("");
+                  setSaveSuccess("");
+                }}
+              >
+                Reset
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="w-full p-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Privacy
+          </CardTitle>
+          <CardDescription>
+            Control who can contact you and see your information.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-base font-medium">
+                Allow Direct Messages
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Let other users send you direct messages
+              </p>
+            </div>
+            <Switch defaultChecked />
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-base font-medium">
+                Show Online Status
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Display when you're online to other users
+              </p>
+            </div>
+            <Switch defaultChecked />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Appearance Settings Component (keeping existing implementation)
 const AppearanceSettings: React.FC = () => {
   const {
     currentLightTheme,
@@ -67,12 +457,6 @@ const AppearanceSettings: React.FC = () => {
     setMode,
     setTheme,
   } = useTheme();
-  const [compactMode, setCompactMode] = useState(false);
-  const [showTimestamps, setShowTimestamps] = useState(true);
-  const [animationsEnabled, setAnimationsEnabled] = useState(true);
-  const [reduceMotion, setReduceMotion] = useState(false);
-  const [highContrast, setHighContrast] = useState(false);
-
   const lightThemes = getThemesForMode("light");
   const darkThemes = getThemesForMode("dark");
 
@@ -245,344 +629,13 @@ const AppearanceSettings: React.FC = () => {
               </div>
             </div>
           </div>
-
-          {/* Theme Grid */}
-          <div className="mt-6">
-            <Label className="text-sm font-medium">Available Themes</Label>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              {/* Light Themes */}
-              {lightThemes.map((theme) => (
-                <button
-                  key={theme.id}
-                  onClick={() => setTheme(theme.id)}
-                  className={`p-3 rounded-lg border-2 transition-all text-left ${
-                    currentLightTheme.id === theme.id
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-sm">{theme.name}</span>
-                    <Sun className="h-4 w-4 text-yellow-500" />
-                  </div>
-                  {theme.description && (
-                    <p className="text-xs text-muted-foreground mb-2">
-                      {theme.description}
-                    </p>
-                  )}
-                  <div className="flex gap-1">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: theme.colors.primary }}
-                    />
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: theme.colors.secondary }}
-                    />
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: theme.colors.accent }}
-                    />
-                  </div>
-                </button>
-              ))}
-
-              {/* Dark Themes */}
-              {darkThemes.map((theme) => (
-                <button
-                  key={theme.id}
-                  onClick={() => setTheme(theme.id)}
-                  className={`p-3 rounded-lg border-2 transition-all text-left ${
-                    currentDarkTheme.id === theme.id
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-sm">{theme.name}</span>
-                    <Moon className="h-4 w-4 text-blue-400" />
-                  </div>
-                  {theme.description && (
-                    <p className="text-xs text-muted-foreground mb-2">
-                      {theme.description}
-                    </p>
-                  )}
-                  <div className="flex gap-1">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: theme.colors.primary }}
-                    />
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: theme.colors.secondary }}
-                    />
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: theme.colors.accent }}
-                    />
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Theme Stats */}
-          <div className="mt-4 grid grid-cols-2 gap-4">
-            <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className="text-lg font-semibold">{lightThemes.length}</div>
-              <div className="text-sm text-muted-foreground">Light Themes</div>
-            </div>
-            <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className="text-lg font-semibold">{darkThemes.length}</div>
-              <div className="text-sm text-muted-foreground">Dark Themes</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Display Settings */}
-      <Card className="w-full p-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Eye className="h-5 w-5" />
-            Display Settings
-          </CardTitle>
-          <CardDescription>
-            Customize how content is displayed in the app.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base font-medium">Compact Mode</Label>
-              <p className="text-sm text-muted-foreground">
-                Use less space between messages and interface elements
-              </p>
-            </div>
-            <Switch checked={compactMode} onCheckedChange={setCompactMode} />
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base font-medium">
-                Show Message Timestamps
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Display timestamps next to messages
-              </p>
-            </div>
-            <Switch
-              checked={showTimestamps}
-              onCheckedChange={setShowTimestamps}
-            />
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base font-medium">Enable Animations</Label>
-              <p className="text-sm text-muted-foreground">
-                Play animations throughout the interface
-              </p>
-            </div>
-            <Switch
-              checked={animationsEnabled}
-              onCheckedChange={setAnimationsEnabled}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Accessibility */}
-      <Card className="w-full p-6">
-        <CardHeader>
-          <CardTitle>Accessibility</CardTitle>
-          <CardDescription>
-            Settings to improve accessibility and usability.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base font-medium">Reduce Motion</Label>
-              <p className="text-sm text-muted-foreground">
-                Reduce motion and animations for users with vestibular disorders
-              </p>
-            </div>
-            <Switch checked={reduceMotion} onCheckedChange={setReduceMotion} />
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base font-medium">High Contrast</Label>
-              <p className="text-sm text-muted-foreground">
-                Increase contrast for better visibility
-              </p>
-            </div>
-            <Switch checked={highContrast} onCheckedChange={setHighContrast} />
-          </div>
         </CardContent>
       </Card>
     </div>
   );
 };
 
-const AccountSettings: React.FC = () => {
-  const { user } = useAuthStore();
-  const [username, setUsername] = useState(user?.username || "");
-  const [nickname, setNickname] = useState(user?.nickname || "");
-  const [bio, setBio] = useState(user?.bio || "");
-  const [email, setEmail] = useState("user@example.com");
-  const [isChanged, setIsChanged] = useState(false);
-
-  const handleSave = () => {
-    console.log("Saving profile changes:", { username, nickname, bio, email });
-    setIsChanged(false);
-  };
-
-  const handleChange = () => {
-    setIsChanged(true);
-  };
-
-  return (
-    <div className="space-y-6 flex flex-col justify-center self-center items-stretch w-2/3">
-      <Card className="w-full p-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Profile
-          </CardTitle>
-          <CardDescription>
-            Update your profile information and display settings.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  handleChange();
-                }}
-                className="max-w-sm"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                value={username}
-                onChange={(e) => {
-                  setUsername(e.target.value);
-                  handleChange();
-                }}
-                className="max-w-sm"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="nickname">Display Name</Label>
-              <Input
-                id="nickname"
-                value={nickname}
-                onChange={(e) => {
-                  setNickname(e.target.value);
-                  handleChange();
-                }}
-                className="max-w-sm"
-                placeholder="How others see your name"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="bio">Bio</Label>
-              <Input
-                id="bio"
-                value={bio}
-                onChange={(e) => {
-                  setBio(e.target.value);
-                  handleChange();
-                }}
-                className="max-w-sm"
-                placeholder="Tell others about yourself"
-              />
-            </div>
-          </div>
-
-          <div className="mt-6 flex gap-2">
-            <Button onClick={handleSave} disabled={!isChanged}>
-              Save Changes
-            </Button>
-            {isChanged && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setUsername(user?.username || "");
-                  setNickname(user?.nickname || "");
-                  setBio(user?.bio || "");
-                  setEmail("user@example.com");
-                  setIsChanged(false);
-                }}
-              >
-                Reset
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="w-full p-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Privacy
-          </CardTitle>
-          <CardDescription>
-            Control who can contact you and see your information.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base font-medium">
-                Allow Direct Messages
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Let other users send you direct messages
-              </p>
-            </div>
-            <Switch defaultChecked />
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base font-medium">
-                Show Online Status
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Display when you're online to other users
-              </p>
-            </div>
-            <Switch defaultChecked />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
-
+// Voice Settings Component
 const VoiceSettings: React.FC = () => {
   const [inputVolume, setInputVolume] = useState(75);
   const [outputVolume, setOutputVolume] = useState(100);
@@ -700,18 +753,20 @@ const VoiceSettings: React.FC = () => {
 
 const SettingsPage: React.FC = () => {
   const { section } = useParams();
-  const currentSection = section || "appearance";
+  const currentSection = section || "account";
 
   const renderSettingsContent = () => {
     switch (currentSection) {
       case "account":
         return <AccountSettings />;
+      case "security":
+        return <SecuritySettings />;
       case "appearance":
         return <AppearanceSettings />;
       case "voice":
         return <VoiceSettings />;
       default:
-        return <AppearanceSettings />;
+        return <AccountSettings />;
     }
   };
 

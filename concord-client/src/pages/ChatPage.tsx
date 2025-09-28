@@ -1,26 +1,20 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router";
 import ReactMarkdown from "react-markdown";
-import { Hash, Volume2, Users, Pin } from "lucide-react";
+import {
+  Hash,
+  Volume2,
+  Users,
+  Pin,
+  MoreHorizontal,
+  Reply,
+  Plus,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Copy, Edit, Trash2, Reply, MoreHorizontal } from "lucide-react";
-import { useInstanceDetails, useInstanceMembers } from "@/hooks/useServers";
-import { useChannelMessages } from "@/hooks/useChannel";
-import { useUiStore } from "@/stores/uiStore";
-import { useAuthStore } from "@/stores/authStore";
-import { Message, User } from "@/types/database";
-import { MessageProps } from "@/components/message/Message";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import {
   dark,
@@ -28,217 +22,294 @@ import {
 } from "react-syntax-highlighter/dist/esm/styles/hljs";
 import { useTheme } from "@/components/theme-provider";
 
+// Updated imports for API integration
+import { useInstanceDetails, useInstanceMembers } from "@/hooks/useServers";
+import {
+  useChannelMessages,
+  useSendMessage,
+  useDeleteMessage,
+  usePinMessage,
+  useLoadMoreMessages,
+} from "@/hooks/useMessages";
+import { useUiStore } from "@/stores/uiStore";
+import { useAuthStore } from "@/stores/authStore";
+import { Message } from "@/lib/api-client";
+
+// Modal imports
+import { MessageActionsModal } from "@/components/modals/MessageActionsModal";
+import { EditMessageModal } from "@/components/modals/EditMessageModal";
+import { PinnedMessagesModal } from "@/components/modals/PinnedMessagesModal";
+
+// User type for message component
+interface MessageUser {
+  id: string;
+  username?: string;
+  userName?: string;
+  nickname?: string | null;
+  nickName?: string | null;
+  picture?: string | null;
+}
+
+// Message Props interface
+interface MessageProps {
+  message: Message;
+  user: MessageUser;
+  currentUser: any;
+  replyTo?: Message;
+  replyToUser?: MessageUser;
+  onEdit?: (messageId: string) => void;
+  onDelete?: (messageId: string) => void;
+  onReply?: (messageId: string) => void;
+  onPin?: (messageId: string) => void;
+  canDelete?: boolean;
+  canPin?: boolean;
+}
+
 const MessageComponent: React.FC<MessageProps> = ({
   message,
   user,
   currentUser,
   replyTo,
+  replyToUser,
   onEdit,
   onDelete,
   onReply,
-  isGrouped,
+  onPin,
+  canDelete = false,
+  canPin = false,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [showActionsModal, setShowActionsModal] = useState(false);
 
   const formatTimestamp = (timestamp: string) => {
-    return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) {
+        return "Invalid date";
+      }
+      return formatDistanceToNow(date, { addSuffix: true });
+    } catch (error) {
+      console.error("Error formatting timestamp:", timestamp, error);
+      return "Invalid date";
+    }
   };
 
   const isOwnMessage = currentUser?.id === message.userId;
   const { mode } = useTheme();
 
+  // Get username with fallback
+  const username = user.username || user.userName || "Unknown User";
+  const displayName = user.nickname || user.nickName || username;
+
+  const isDeleted = (message as any).deleted;
+
+  if (isDeleted) {
+    return (
+      <div className="px-4 py-2 opacity-50">
+        <div className="flex gap-3">
+          <div className="w-10 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm text-concord-secondary italic border border-border rounded px-3 py-2 bg-concord-tertiary/50">
+              This message has been deleted
+              {(message as any).deletedBy && (
+                <span className="text-xs block mt-1">
+                  Deleted by {(message as any).deletedBy}
+                  {(message as any).deletedAt &&
+                    ` • ${formatTimestamp((message as any).deletedAt)}`}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={`group relative px-4 hover:bg-concord-secondary/50 transition-colors ${
-        isGrouped ? "mt-0 py-0" : "mt-4"
-      }`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <div className="flex gap-3">
-        {/* Avatar - only show if not grouped */}
-        <div className="w-10 flex-shrink-0">
-          {!isGrouped && (
+    <>
+      <div
+        className="group relative px-4 py-2 hover:bg-concord-secondary/50 transition-colors"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <div className="flex gap-3">
+          {/* Avatar - always show */}
+          <div className="w-10 flex-shrink-0">
             <Avatar className="h-10 w-10">
-              <AvatarImage
-                src={user.picture || undefined}
-                alt={user.username}
-              />
+              <AvatarImage src={user.picture || undefined} alt={username} />
               <AvatarFallback className="text-sm bg-primary text-primary-foreground">
-                {user.username.slice(0, 2).toUpperCase()}
+                {username.slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-          )}
-        </div>
-        {/* Message content */}
-        <div className="flex-1 min-w-0">
-          {/* Reply line and reference */}
-          {replyTo && (
-            <div className="flex items-center gap-2 mb-2 text-xs text-concord-secondary">
-              <div className="w-6 h-3 border-l-2 border-t-2 border-concord-secondary/50 rounded-tl-md ml-2" />
-              <span className="font-medium text-concord-primary">
-                {replyTo?.user?.nickname || replyTo?.user?.username}
-              </span>
-              <span className="truncate max-w-xs opacity-75">
-                {replyTo.content.replace(/```[\s\S]*?```/g, "[code]")}
-              </span>
-            </div>
-          )}
-          {/* Header - only show if not grouped */}
-          {!isGrouped && (
+          </div>
+
+          {/* Message content */}
+          <div className="flex-1 min-w-0">
+            {/* Reply line and reference */}
+            {replyTo && replyToUser && (
+              <div className="flex items-center gap-2 mb-2 text-xs text-concord-secondary">
+                <div className="w-6 h-3 border-l-2 border-t-2 border-concord-secondary/50 rounded-tl-md ml-2" />
+                <span className="font-medium text-concord-primary">
+                  {replyToUser.nickname ||
+                    replyToUser.nickName ||
+                    replyToUser.username ||
+                    replyToUser.userName}
+                </span>
+                <span className="truncate max-w-xs opacity-75">
+                  {replyTo.text.replace(/```[\s\S]*?```/g, "[code]")}
+                </span>
+              </div>
+            )}
+
+            {/* Header - always show */}
             <div className="flex items-baseline gap-2 mb-1">
               <span className="font-semibold text-concord-primary">
-                {user.nickname || user.username}
+                {displayName}
               </span>
               <span className="text-xs text-concord-secondary">
                 {formatTimestamp(message.createdAt)}
               </span>
+              {message.edited && (
+                <span className="text-xs text-concord-secondary opacity-60">
+                  (edited)
+                </span>
+              )}
+              {(message as any).pinned && (
+                <Pin className="h-3 w-3 text-yellow-500" />
+              )}
+            </div>
+
+            {/* Message content with markdown */}
+            <div className="text-concord-primary leading-relaxed prose prose-sm max-w-none dark:prose-invert">
+              <ReactMarkdown
+                components={{
+                  code: ({ node, className, children, ...props }) => {
+                    const match = /language-(\w+)/.exec(className || "");
+                    return match ? (
+                      <div className="flex flex-row flex-1 max-w-2/3 flex-wrap !bg-transparent">
+                        <SyntaxHighlighter
+                          PreTag="div"
+                          children={String(children).replace(/\n$/, "")}
+                          language={match[1]}
+                          style={mode === "light" ? solarizedLight : dark}
+                          className="!bg-concord-secondary p-2 border-2 concord-border rounded-xl"
+                        />
+                      </div>
+                    ) : (
+                      <code className={className}>{children}</code>
+                    );
+                  },
+                  blockquote: ({ children }) => (
+                    <blockquote className="border-l-4 border-primary pl-4 my-2 italic text-concord-secondary bg-concord-secondary/30 py-2 rounded-r">
+                      {children}
+                    </blockquote>
+                  ),
+                  p: ({ children }) => (
+                    <p className="my-1 text-concord-primary">{children}</p>
+                  ),
+                  strong: ({ children }) => (
+                    <strong className="font-semibold text-concord-primary">
+                      {children}
+                    </strong>
+                  ),
+                  em: ({ children }) => (
+                    <em className="italic text-concord-primary">{children}</em>
+                  ),
+                  ul: ({ children }) => (
+                    <ul className="list-disc list-inside my-2 text-concord-primary">
+                      {children}
+                    </ul>
+                  ),
+                  ol: ({ children }) => (
+                    <ol className="list-decimal list-inside my-2 text-concord-primary">
+                      {children}
+                    </ol>
+                  ),
+                  h1: ({ children }) => (
+                    <h1 className="text-xl font-bold my-2 text-concord-primary">
+                      {children}
+                    </h1>
+                  ),
+                  h2: ({ children }) => (
+                    <h2 className="text-lg font-bold my-2 text-concord-primary">
+                      {children}
+                    </h2>
+                  ),
+                  h3: ({ children }) => (
+                    <h3 className="text-base font-bold my-2 text-concord-primary">
+                      {children}
+                    </h3>
+                  ),
+                  a: ({ children, href }) => (
+                    <a
+                      href={href}
+                      className="text-primary hover:underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {children}
+                    </a>
+                  ),
+                }}
+              >
+                {message.text}
+              </ReactMarkdown>
+            </div>
+          </div>
+
+          {/* Message actions */}
+          {isHovered && (
+            <div className="absolute top-0 right-4 bg-concord-secondary border border-border rounded-md shadow-md flex">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 interactive-hover"
+                onClick={() => onReply?.(message.id)}
+              >
+                <Reply className="h-4 w-4" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 interactive-hover"
+                onClick={() => setShowActionsModal(true)}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
             </div>
           )}
-
-          {/* Message content with markdown */}
-          <div className="text-concord-primary leading-relaxed prose prose-sm max-w-none dark:prose-invert">
-            <ReactMarkdown
-              components={{
-                code: ({ node, className, children, ...props }) => {
-                  const match = /language-(\w+)/.exec(className || "");
-                  return match ? (
-                    <div className="flex flex-row flex-1 max-w-2/3 flex-wrap !bg-transparent">
-                      <SyntaxHighlighter
-                        PreTag="div"
-                        children={String(children).replace(/\n$/, "")}
-                        language={match[1]}
-                        style={mode === "light" ? solarizedLight : dark}
-                        className="!bg-concord-secondary p-2 border-2 concord-border rounded-xl"
-                      />
-                    </div>
-                  ) : (
-                    <code className={className}>{children}</code>
-                  );
-                },
-                blockquote: ({ children }) => (
-                  <blockquote className="border-l-4 border-primary pl-4 my-2 italic text-concord-secondary bg-concord-secondary/30 py-2 rounded-r">
-                    {children}
-                  </blockquote>
-                ),
-                p: ({ children }) => (
-                  <p className="my-1 text-concord-primary">{children}</p>
-                ),
-                strong: ({ children }) => (
-                  <strong className="font-semibold text-concord-primary">
-                    {children}
-                  </strong>
-                ),
-                em: ({ children }) => (
-                  <em className="italic text-concord-primary">{children}</em>
-                ),
-                ul: ({ children }) => (
-                  <ul className="list-disc list-inside my-2 text-concord-primary">
-                    {children}
-                  </ul>
-                ),
-                ol: ({ children }) => (
-                  <ol className="list-decimal list-inside my-2 text-concord-primary">
-                    {children}
-                  </ol>
-                ),
-                h1: ({ children }) => (
-                  <h1 className="text-xl font-bold my-2 text-concord-primary">
-                    {children}
-                  </h1>
-                ),
-                h2: ({ children }) => (
-                  <h2 className="text-lg font-bold my-2 text-concord-primary">
-                    {children}
-                  </h2>
-                ),
-                h3: ({ children }) => (
-                  <h3 className="text-base font-bold my-2 text-concord-primary">
-                    {children}
-                  </h3>
-                ),
-                a: ({ children, href }) => (
-                  <a
-                    href={href}
-                    className="text-primary hover:underline"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {children}
-                  </a>
-                ),
-              }}
-            >
-              {message.content}
-            </ReactMarkdown>
-          </div>
         </div>
-        {/* Message actions */}
-        {isHovered && (
-          <div className="absolute top-0 right-4 bg-concord-secondary border border-border rounded-md shadow-md flex">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 interactive-hover"
-              onClick={() => onReply?.(message.id)}
-            >
-              <Reply className="h-4 w-4" />
-            </Button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 interactive-hover"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem
-                  onClick={() => navigator.clipboard.writeText(message.content)}
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copy Text
-                </DropdownMenuItem>
-                {isOwnMessage && (
-                  <>
-                    <DropdownMenuItem onClick={() => onEdit?.(message.id)}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Message
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => onDelete?.(message.id)}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Message
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
       </div>
-    </div>
+
+      {/* Message Actions Modal */}
+      <MessageActionsModal
+        isOpen={showActionsModal}
+        onClose={() => setShowActionsModal(false)}
+        message={message}
+        isOwnMessage={isOwnMessage}
+        canDelete={canDelete}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onReply={onReply}
+        onPin={canPin ? onPin : undefined}
+      />
+    </>
   );
 };
 
 // Message Input Component
 interface MessageInputProps {
+  channelId: string;
   channelName?: string;
-  onSendMessage: (content: string) => void;
   replyingTo?: Message | null;
   onCancelReply?: () => void;
-  replyingToUser: User | null;
+  replyingToUser: MessageUser | null;
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
+  channelId,
   channelName,
-  onSendMessage,
   replyingTo,
   onCancelReply,
   replyingToUser,
@@ -246,6 +317,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const [content, setContent] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+
+  // Use the API hook for sending messages
+  const sendMessageMutation = useSendMessage();
 
   // Auto-resize textarea
   useEffect(() => {
@@ -255,18 +329,27 @@ const MessageInput: React.FC<MessageInputProps> = ({
     }
   }, [content]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (content.trim()) {
-      onSendMessage(content.trim());
-      setContent("");
+    if (content.trim() && !sendMessageMutation.isPending) {
+      try {
+        await sendMessageMutation.mutateAsync({
+          channelId,
+          content: content.trim(),
+          repliedMessageId: replyingTo?.id || null,
+        });
+        setContent("");
+        onCancelReply?.();
+      } catch (error) {
+        console.error("Failed to send message:", error);
+      }
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      formRef.current?.requestSubmit(); // <-- Programmatically submit form
+      formRef.current?.requestSubmit();
     }
   };
 
@@ -278,7 +361,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
             <div className="flex items-center gap-2">
               <div className="w-6 h-4 border-l-2 border-t-2 border-concord-secondary/50 rounded-tl-md ml-2" />
               <span className="font-medium text-concord-primary">
-                {replyingToUser.nickname || replyingToUser.username}
+                {replyingToUser.nickname ||
+                  replyingToUser.nickName ||
+                  replyingToUser.username ||
+                  replyingToUser.userName}
               </span>
             </div>
             <Button
@@ -291,7 +377,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             </Button>
           </div>
           <div className="text-sm text-concord-primary truncate pl-2">
-            {replyingTo.content.replace(/```[\s\S]*?```/g, "[code]")}
+            {replyingTo.text.replace(/```[\s\S]*?```/g, "[code]")}
           </div>
         </div>
       )}
@@ -304,14 +390,17 @@ const MessageInput: React.FC<MessageInputProps> = ({
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={`Message #${channelName || "channel"}`}
-            className="w-full bg-concord-tertiary border border-border rounded-lg px-4 py-3 text-concord-primary placeholder-concord-muted resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            disabled={sendMessageMutation.isPending}
+            className="w-full bg-concord-tertiary border border-border rounded-lg px-4 py-3 text-concord-primary placeholder-concord-muted resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
             style={{
               minHeight: "44px",
               maxHeight: "200px",
             }}
           />
           <div className="absolute right-3 bottom-3 text-xs text-concord-secondary">
-            Press Enter to send • Shift+Enter for new line
+            {sendMessageMutation.isPending
+              ? "Sending..."
+              : "Press Enter to send • Shift+Enter for new line"}
           </div>
         </div>
       </form>
@@ -321,40 +410,197 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
 const ChatPage: React.FC = () => {
   const { instanceId, channelId } = useParams();
-  const { data: instance } = useInstanceDetails(instanceId);
-  const categories = instance?.categories;
-  const { data: channelMessages } = useChannelMessages(channelId);
-  const { toggleMemberList, showMemberList } = useUiStore();
-  const { user: currentUser } = useAuthStore();
-  const { data: users } = useInstanceMembers(instanceId);
-
-  // State for messages and interactions
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
   const navigate = useNavigate();
 
-  // Use sample current user if none exists
-  const displayCurrentUser =
-    currentUser || users?.find((u) => u.id === "current");
+  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL LOGIC
+  // API hooks - called unconditionally
+  const {
+    data: instance,
+    isLoading: instanceLoading,
+    error: instanceError,
+  } = useInstanceDetails(instanceId);
+  const {
+    data: channelMessages,
+    isLoading: messagesLoading,
+    error: messagesError,
+  } = useChannelMessages(channelId);
+  const { data: users, isLoading: usersLoading } =
+    useInstanceMembers(instanceId);
 
-  // Find current channel
-  const currentChannel = categories
-    ?.flatMap((cat) => cat.channels)
-    ?.find((ch) => ch.id === channelId);
+  // UI state hooks - called unconditionally
+  const { toggleMemberList, showMemberList } = useUiStore();
+  const { user: currentUser } = useAuthStore();
 
-  // Update messages when channel messages load
-  useEffect(() => {
-    if (channelMessages) {
-      setMessages(channelMessages.map((msg) => ({ ...msg, replyToId: null })));
-    }
-  }, [channelMessages]);
+  // Local state hooks - called unconditionally
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [showPinnedMessages, setShowPinnedMessages] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // Scroll to bottom when messages change
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesStartRef = useRef<HTMLDivElement>(null);
+
+  // API mutation hooks - called unconditionally
+  const deleteMessageMutation = useDeleteMessage();
+  const pinMessageMutation = usePinMessage();
+  const loadMoreMessagesMutation = useLoadMoreMessages(channelId);
+
+  // Memoized values - called unconditionally
+  const categories = instance?.categories;
+
+  const currentChannel = React.useMemo(() => {
+    return categories
+      ?.flatMap((cat) => cat.channels)
+      ?.find((ch) => ch.id === channelId);
+  }, [categories, channelId]);
+
+  const userHasAccess = React.useMemo(() => {
+    if (!currentUser || !instanceId) return false;
+    if (currentUser.admin) return true;
+    return currentUser.roles.some((role) => role.instanceId === instanceId);
+  }, [currentUser, instanceId]);
+
+  const canDeleteMessages = React.useMemo(() => {
+    if (!currentUser || !instanceId) return false;
+    if (currentUser.admin) return true;
+    const userRole = currentUser.roles.find(
+      (role) => role.instanceId === instanceId,
+    );
+    return userRole && (userRole.role === "admin" || userRole.role === "mod");
+  }, [currentUser, instanceId]);
+
+  const canPinMessages = React.useMemo(() => {
+    if (!currentUser || !instanceId) return false;
+    if (currentUser.admin) return true;
+    const userRole = currentUser.roles.find(
+      (role) => role.instanceId === instanceId,
+    );
+    return userRole && (userRole.role === "admin" || userRole.role === "mod");
+  }, [currentUser, instanceId]);
+
+  // Effects - called unconditionally
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [channelMessages]);
+
+  // Event handlers
+  const handleLoadMore = React.useCallback(async () => {
+    if (!channelMessages || channelMessages.length === 0 || isLoadingMore)
+      return;
+
+    setIsLoadingMore(true);
+    try {
+      const oldestMessage = channelMessages[0];
+      await loadMoreMessagesMutation.mutateAsync({
+        beforeDate: new Date(oldestMessage.createdAt),
+      });
+    } catch (error) {
+      console.error("Failed to load more messages:", error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [channelMessages, isLoadingMore, loadMoreMessagesMutation]);
+
+  const handleReply = React.useCallback(
+    (messageId: string) => {
+      const message = channelMessages?.find((m) => m.id === messageId);
+      if (message) {
+        setReplyingTo(message);
+      }
+    },
+    [channelMessages],
+  );
+
+  const handleEdit = React.useCallback(
+    (messageId: string) => {
+      const message = channelMessages?.find((m) => m.id === messageId);
+      if (message) {
+        setEditingMessage(message);
+      }
+    },
+    [channelMessages],
+  );
+
+  const handleDelete = React.useCallback(
+    async (messageId: string) => {
+      if (confirm("Are you sure you want to delete this message?")) {
+        try {
+          await deleteMessageMutation.mutateAsync({
+            messageId,
+            channelId: channelId!,
+          });
+        } catch (error) {
+          console.error("Failed to delete message:", error);
+        }
+      }
+    },
+    [deleteMessageMutation, channelId],
+  );
+
+  const handlePin = React.useCallback(
+    async (messageId: string) => {
+      try {
+        const message = channelMessages?.find((m) => m.id === messageId);
+        const isPinned = (message as any)?.pinned;
+
+        await pinMessageMutation.mutateAsync({
+          messageId,
+          channelId: channelId!,
+          pinned: !isPinned,
+        });
+      } catch (error) {
+        console.error("Failed to pin/unpin message:", error);
+      }
+    },
+    [pinMessageMutation, channelId, channelMessages],
+  );
+
+  // NOW WE CAN START CONDITIONAL LOGIC AND EARLY RETURNS
+
+  // Handle loading states
+  if (instanceLoading || messagesLoading || usersLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-concord-primary">
+        <div className="text-center text-concord-secondary">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Loading chat...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle errors and permissions
+  if (!userHasAccess) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-concord-primary">
+        <div className="text-center text-concord-secondary">
+          <h2 className="text-xl font-semibold mb-2 text-destructive">
+            Access Denied
+          </h2>
+          <p className="mb-4">You don't have permission to view this server.</p>
+          <Button onClick={() => navigate("/channels/@me")}>Go Home</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (instanceError || messagesError) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-concord-primary">
+        <div className="text-center text-concord-secondary">
+          <h2 className="text-xl font-semibold mb-2 text-destructive">
+            Error Loading Chat
+          </h2>
+          <p className="mb-4">
+            {instanceError?.message ||
+              messagesError?.message ||
+              "Something went wrong"}
+          </p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
 
   // Require both instanceId and channelId for chat
   if (!instanceId) {
@@ -362,9 +608,9 @@ const ChatPage: React.FC = () => {
       <div className="flex-1 flex items-center justify-center bg-concord-primary">
         <div className="text-center text-concord-secondary">
           <h2 className="text-xl font-semibold mb-2 text-concord-primary">
-            No Channel Selected
+            No Server Selected
           </h2>
-          <p>Select a channel from the sidebar to start chatting.</p>
+          <p>Select a server from the sidebar to start chatting.</p>
         </div>
       </div>
     );
@@ -373,9 +619,10 @@ const ChatPage: React.FC = () => {
       ?.flatMap((cat) => cat.channels)
       ?.find((channel) => channel.position === 0)?.id;
 
-    if (existingChannelId)
+    if (existingChannelId) {
       navigate(`/channels/${instanceId}/${existingChannelId}`);
-    else
+      return null;
+    } else {
       return (
         <div className="flex-1 flex items-center justify-center bg-concord-primary">
           <div className="text-center text-concord-secondary">
@@ -386,60 +633,12 @@ const ChatPage: React.FC = () => {
           </div>
         </div>
       );
+    }
   }
+
   const ChannelIcon = currentChannel?.type === "voice" ? Volume2 : Hash;
 
-  // Message handlers
-  const handleSendMessage = (content: string) => {
-    if (!displayCurrentUser) return;
-
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      content,
-      channelId: channelId || "",
-      userId: displayCurrentUser.id,
-      edited: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      replyTo: replyingTo || null,
-    };
-
-    setMessages((prev) => [...prev, newMessage]);
-    setReplyingTo(null);
-  };
-
-  const handleReply = (messageId: string) => {
-    const message = messages.find((m) => m.id === messageId);
-    if (message) {
-      setReplyingTo(message);
-    }
-  };
-
-  const handleEdit = (messageId: string) => {
-    // TODO: Implement edit functionality
-    console.log("Edit message:", messageId);
-  };
-
-  const handleDelete = (messageId: string) => {
-    setMessages((prev) => prev.filter((m) => m.id !== messageId));
-  };
-
-  // Group messages by user and time
-  const groupedMessages = messages.reduce((acc, message, index) => {
-    const prevMessage = index > 0 ? messages[index - 1] : null;
-    const isGrouped =
-      prevMessage &&
-      prevMessage.userId === message.userId &&
-      !message.replyTo && // Don't group replies
-      !prevMessage.replyTo && // Don't group if previous was a reply
-      new Date(message.createdAt).getTime() -
-        new Date(prevMessage.createdAt).getTime() <
-        5 * 60 * 1000; // 5 minutes
-
-    acc.push({ ...message, isGrouped });
-    return acc;
-  }, [] as Message[]);
-
+  console.log(channelMessages);
   return (
     <div className="flex flex-col flex-shrink h-full bg-concord-primary">
       {/* Channel Header */}
@@ -464,6 +663,7 @@ const ChatPage: React.FC = () => {
             variant="ghost"
             size="icon"
             className="h-8 w-8 interactive-hover"
+            onClick={() => setShowPinnedMessages(true)}
           >
             <Pin size={16} />
           </Button>
@@ -488,6 +688,28 @@ const ChatPage: React.FC = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Messages Area */}
         <ScrollArea className="flex-1 min-h-0">
+          {/* Load More Button */}
+          {channelMessages && channelMessages.length > 0 && (
+            <div className="flex justify-center py-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                className="text-xs"
+              >
+                {isLoadingMore ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                ) : (
+                  <Plus className="h-4 w-4 mr-2" />
+                )}
+                {isLoadingMore ? "Loading..." : "Load older messages"}
+              </Button>
+            </div>
+          )}
+
+          <div ref={messagesStartRef} />
+
           {/* Welcome Message */}
           <div className="px-4 py-6 border-b border-concord/50 flex-shrink-0">
             <div className="flex items-center space-x-3 mb-3">
@@ -509,28 +731,33 @@ const ChatPage: React.FC = () => {
 
           <div className="pb-4">
             {/* Messages */}
-            {groupedMessages.length > 0 ? (
+            {channelMessages && channelMessages.length > 0 ? (
               <div>
-                {groupedMessages.map((message) => {
+                {channelMessages.map((message) => {
                   const user = users?.find((u) => u.id === message.userId);
-                  const replyToMessage = messages.find(
-                    (m) => m.id === message.replyTo?.id,
+                  const replyToMessage = channelMessages?.find(
+                    (m) => m.id === message.replyToId,
                   );
-                  const replyToUser = replyToMessage?.user;
+                  const replyToUser = replyToMessage
+                    ? users?.find((u) => u.id === replyToMessage.userId)
+                    : undefined;
 
                   if (!user) return null;
+
                   return (
                     <MessageComponent
                       key={message.id}
                       message={message}
                       user={user}
-                      currentUser={displayCurrentUser}
+                      currentUser={currentUser}
                       replyTo={replyToMessage}
                       onEdit={handleEdit}
                       onDelete={handleDelete}
                       onReply={handleReply}
+                      onPin={handlePin}
                       replyToUser={replyToUser}
-                      isGrouped={message.isGrouped}
+                      canDelete={canDeleteMessages}
+                      canPin={canPinMessages}
                     />
                   );
                 })}
@@ -548,20 +775,41 @@ const ChatPage: React.FC = () => {
         </ScrollArea>
 
         {/* Message Input */}
-        <div className="flex-shrink-0">
-          <MessageInput
-            channelName={currentChannel?.name}
-            onSendMessage={handleSendMessage}
-            replyingTo={replyingTo}
-            onCancelReply={() => setReplyingTo(null)}
-            replyingToUser={
-              replyingTo
-                ? users?.find((u) => u.id === replyingTo.userId) || null
-                : null
-            }
-          />
-        </div>
+        {currentUser && (
+          <div className="flex-shrink-0">
+            <MessageInput
+              channelId={channelId}
+              channelName={currentChannel?.name}
+              replyingTo={replyingTo}
+              onCancelReply={() => setReplyingTo(null)}
+              replyingToUser={
+                replyingTo
+                  ? users?.find((u) => u.id === replyingTo.userId) || null
+                  : null
+              }
+            />
+          </div>
+        )}
       </div>
+
+      {/* Edit Message Modal */}
+      {editingMessage && (
+        <EditMessageModal
+          isOpen={!!editingMessage}
+          onClose={() => setEditingMessage(null)}
+          message={editingMessage}
+          channelId={channelId!}
+        />
+      )}
+
+      {/* Pinned Messages Modal */}
+      <PinnedMessagesModal
+        isOpen={showPinnedMessages}
+        onClose={() => setShowPinnedMessages(false)}
+        channelId={channelId!}
+        channelName={currentChannel?.name || "channel"}
+        canManagePins={canPinMessages ? canPinMessages : false}
+      />
     </div>
   );
 };

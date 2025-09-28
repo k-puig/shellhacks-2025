@@ -1,11 +1,15 @@
-import React from "react";
+// src/components/layout/MemberList.tsx - Enhanced with role management
+import React, { useState } from "react";
 import { useParams } from "react-router";
 import { Crown, Shield, UserIcon } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { Role } from "@/types/database";
 import { useInstanceMembers } from "@/hooks/useServers";
+import { useAuthStore } from "@/stores/authStore";
 import { User } from "@/types/database";
+import { UserRoleModal } from "@/components/modals/UserRoleModal";
 
 // Status color utility
 const getStatusColor = (status: string) => {
@@ -23,6 +27,9 @@ const getStatusColor = (status: string) => {
 
 interface MemberItemProps {
   member: User;
+  instanceId: string;
+  currentUserRole: string;
+  canManageRoles: boolean;
   isOwner?: boolean;
 }
 
@@ -43,61 +50,117 @@ const getRoleInfo = (role: string) => {
   }
 };
 
-const MemberItem: React.FC<MemberItemProps> = ({ member, isOwner = false }) => {
-  const { instanceId } = useParams();
+const MemberItem: React.FC<MemberItemProps> = ({
+  member,
+  instanceId,
+  currentUserRole,
+  canManageRoles,
+  isOwner = false,
+}) => {
+  const [showUserModal, setShowUserModal] = useState(false);
   const userRole = getUserRoleForInstance(member.roles, instanceId || "");
   const roleInfo = getRoleInfo(userRole);
 
-  return (
-    <div className="panel-button">
-      <div className="relative">
-        <Avatar className="h-8 w-8">
-          <AvatarImage
-            src={member.picture || undefined}
-            alt={member.username}
-          />
-          <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-            {member.username.slice(0, 2).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        {/* Status indicator */}
-        <div
-          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-sidebar ${getStatusColor(member.status)}`}
-        />
-      </div>
+  const handleMemberClick = () => {
+    if (canManageRoles && !member.admin) {
+      setShowUserModal(true);
+    }
+  };
 
-      <div className="ml-3 flex-1 min-w-0">
-        <div className="flex items-center gap-1">
-          {isOwner && (
-            <Crown size={12} className="text-yellow-500 flex-shrink-0" />
-          )}
-          {!isOwner && userRole !== "member" && (
-            <Shield
-              size={12}
-              className="flex-shrink-0"
-              style={{ color: roleInfo.color || "var(--background)" }}
+  return (
+    <>
+      <Button
+        variant="ghost"
+        className="w-full justify-start p-2 h-auto hover:bg-concord-tertiary/50"
+        onClick={handleMemberClick}
+        disabled={!canManageRoles || member.admin}
+      >
+        <div className="flex items-center gap-3 w-full">
+          <div className="relative">
+            <Avatar className="h-8 w-8">
+              <AvatarImage
+                src={member.picture || undefined}
+                alt={member.username}
+              />
+              <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                {member.username.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            {/* Status indicator */}
+            <div
+              className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-sidebar ${getStatusColor(member.status)}`}
             />
-          )}
-          <span
-            className="text-sm font-medium truncate"
-            style={{ color: roleInfo.color || "var(--color-text-primary)" }}
-          >
-            {member.nickname || member.username}
-          </span>
-        </div>
-        {member.bio && (
-          <div className="text-xs text-concord-secondary truncate">
-            {member.bio}
           </div>
-        )}
-      </div>
-    </div>
+
+          <div className="flex-1 min-w-0 text-left">
+            <div className="flex items-center gap-1">
+              {isOwner && (
+                <Crown size={12} className="text-yellow-500 flex-shrink-0" />
+              )}
+              {!isOwner && userRole !== "member" && (
+                <Shield
+                  size={12}
+                  className="flex-shrink-0"
+                  style={{ color: roleInfo.color || "var(--background)" }}
+                />
+              )}
+              <span
+                className="text-sm font-medium truncate"
+                style={{ color: roleInfo.color || "var(--color-text-primary)" }}
+              >
+                {member.nickname || member.username}
+              </span>
+            </div>
+            {member.bio && (
+              <div className="text-xs text-concord-secondary truncate">
+                {member.bio}
+              </div>
+            )}
+          </div>
+        </div>
+      </Button>
+
+      {/* User Role Modal */}
+      <UserRoleModal
+        isOpen={showUserModal}
+        onClose={() => setShowUserModal(false)}
+        user={member}
+        instanceId={instanceId}
+        currentUserRole={currentUserRole}
+        canManageRoles={canManageRoles}
+      />
+    </>
   );
 };
 
 const MemberList: React.FC = () => {
   const { instanceId } = useParams();
   const { data: members, isLoading } = useInstanceMembers(instanceId);
+  const { user: currentUser } = useAuthStore();
+
+  // Check if current user can manage roles
+  const canManageRoles = React.useMemo(() => {
+    if (!currentUser || !instanceId) return false;
+
+    // Global admins can manage roles
+    if (currentUser.admin) return true;
+
+    // Check if user is admin or mod in this instance
+    const userRole = currentUser.roles.find(
+      (role) => role.instanceId === instanceId,
+    );
+    return userRole && (userRole.role === "admin" || userRole.role === "mod");
+  }, [currentUser, instanceId]);
+
+  const currentUserRole = React.useMemo(() => {
+    if (!currentUser || !instanceId) return "member";
+    if (currentUser.admin) return "admin";
+
+    const userRole = currentUser.roles.find(
+      (role) => role.instanceId === instanceId,
+    );
+    return userRole?.role || "member";
+  }, [currentUser, instanceId]);
 
   if (!instanceId) {
     return null;
@@ -177,6 +240,9 @@ const MemberList: React.FC = () => {
                     <MemberItem
                       key={member.id}
                       member={member}
+                      instanceId={instanceId}
+                      currentUserRole={currentUserRole}
+                      canManageRoles={canManageRoles}
                       isOwner={false}
                     />
                   ))}

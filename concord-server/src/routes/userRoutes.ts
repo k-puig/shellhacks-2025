@@ -3,15 +3,48 @@ import {
   fetchAllUsers,
   fetchUserData,
   createNewUser,
+  fetchUserId,
 } from "../controller/userController";
 import {
   createUserSchema,
   queryAllUsersByInstanceId,
   queryUserByIdSchema,
+  queryUserByUsernameSchema,
 } from "../validators/userValidator";
 import { zValidator } from "@hono/zod-validator";
 import { describeRoute, resolver } from "hono-openapi";
 const userRoutes = new Hono();
+
+userRoutes.get(
+  "/username/:username",
+  describeRoute({
+    description: "Get userId by username",
+    responses: {
+      200: {
+        description: "Success getting userId",
+        content: {
+          "application/json": { schema: resolver(queryUserByUsernameSchema) },
+        },
+      },
+      404: {
+        description: "userId not found",
+        content: {
+          "application/json": { schema: resolver(queryUserByUsernameSchema) },
+        },
+      },
+    },
+  }),
+  zValidator("param", queryUserByUsernameSchema),
+  async (c) => {
+    const username = c.req.param("username");
+    const userId = await fetchUserId(username);
+    if (userId) {
+      return c.json(userId);
+    } else {
+      return c.json({ error: "User not found" }, 404);
+    }
+  },
+);
 
 userRoutes.get(
   "/:id",

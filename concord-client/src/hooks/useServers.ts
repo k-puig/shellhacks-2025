@@ -1,334 +1,117 @@
-import { useQuery } from "@tanstack/react-query";
-import { Instance, User } from "@/types/database";
-import { InstanceWithDetails } from "@/types/api";
-import { CategoryWithChannels } from "@/types/api";
+// src/hooks/useServers.ts - Fixed with proper types
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  apiClient,
+  Instance,
+  Category,
+  Channel,
+  BackendUser,
+} from "@/lib/api-client";
+import { useAuthStore } from "@/stores/authStore";
 
-// Sample users data with proper Role structure
-export const SAMPLE_USERS: User[] = [
-  {
-    id: "1",
-    username: "alice_dev",
-    nickname: "Alice",
-    bio: "Frontend developer who loves React",
-    picture: null,
-    banner: null,
-    status: "online" as const,
+// Extended types with relations for frontend use
+export interface CategoryWithChannels extends Category {
+  channels: Channel[];
+}
+
+export interface InstanceWithDetails extends Instance {
+  categories: CategoryWithChannels[];
+}
+
+// Transform backend user to frontend user format for compatibility
+function transformBackendUserToFrontend(backendUser: BackendUser) {
+  return {
+    id: backendUser.id,
+    username: backendUser.userName,
+    nickname: backendUser.nickName,
+    bio: backendUser.bio,
+    picture: backendUser.picture,
+    banner: backendUser.banner,
     hashPassword: "",
-    admin: false,
+    admin: backendUser.admin,
+    status:
+      backendUser.status === "dnd"
+        ? "busy"
+        : backendUser.status === "idle"
+          ? "away"
+          : backendUser.status === "invis"
+            ? "offline"
+            : backendUser.status,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    roles: [], // Will be populated per instance
-  },
-  {
-    id: "2",
-    username: "bob_designer",
-    nickname: "Bob",
-    bio: "UI/UX Designer & Coffee Enthusiast",
-    picture:
-      "https://media.istockphoto.com/id/1682296067/photo/happy-studio-portrait-or-professional-man-real-estate-agent-or-asian-businessman-smile-for.jpg?s=612x612&w=0&k=20&c=9zbG2-9fl741fbTWw5fNgcEEe4ll-JegrGlQQ6m54rg=",
-    banner: null,
-    status: "away" as const,
-    hashPassword: "",
-    admin: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    roles: [],
-  },
-  {
-    id: "3",
-    username: "charlie_backend",
-    nickname: "Charlie",
-    bio: "Backend wizard, scaling systems since 2018",
-    picture: null,
-    banner: null,
-    status: "busy" as const,
-    hashPassword: "",
-    admin: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    roles: [],
-  },
-  {
-    id: "current",
-    username: "you",
-    nickname: "You",
-    bio: "That's you!",
-    picture: null,
-    banner: null,
-    status: "online" as const,
-    hashPassword: "",
-    admin: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    roles: [],
-  },
-];
+    roles: backendUser.role.map((r) => ({
+      instanceId: r.instanceId || "",
+      role: r.role || "member",
+    })),
+  };
+}
 
-// Sample servers data
-const SAMPLE_SERVERS: Instance[] = [
-  {
-    id: "1",
-    name: "Dev Team",
-    icon: null,
-    description: "Our development team server",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    name: "Gaming Squad",
-    icon: null,
-    description: "Gaming and fun times",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "3",
-    name: "Book Club",
-    icon: null,
-    description: "Monthly book discussions",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
-
-// Sample messages data
-export const SAMPLE_MESSAGES = [
-  {
-    id: "1",
-    content: "Hey everyone! Just finished the new theme system. Check it out!",
-    channelId: "1", // general channel
-    userId: "1",
-    edited: false,
-    createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "2",
-    content:
-      "Looking great! The dark mode especially feels much better on the eyes 👀",
-    channelId: "1",
-    userId: "2",
-    edited: false,
-    createdAt: new Date(Date.now() - 4 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 4 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "3",
-    content: "Can we add a **high contrast mode** for accessibility?",
-    channelId: "1",
-    userId: "3",
-    edited: false,
-    createdAt: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "4",
-    content:
-      "```typescript\nconst theme = {\n  primary: 'oklch(0.6 0.2 240)',\n  secondary: 'oklch(0.8 0.1 60)'\n};\n```\nHere's how the new color system works!",
-    channelId: "1",
-    userId: "3",
-    edited: false,
-    createdAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "5",
-    content:
-      "Perfect timing! I was just about to ask about the color format. _OKLCH_ is so much better than HSL for this.",
-    channelId: "1",
-    userId: "1",
-    edited: false,
-    createdAt: new Date(Date.now() - 1 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 1 * 60 * 1000).toISOString(),
-  },
-  // Messages for random channel
-  {
-    id: "6",
-    content: "Anyone up for a game tonight?",
-    channelId: "2", // random channel
-    userId: "2",
-    edited: false,
-    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "7",
-    content: "I'm in! What are we playing?",
-    channelId: "2",
-    userId: "1",
-    edited: false,
-    createdAt: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-  },
-];
-
-// Sample categories with channels
-const createSampleCategories = (instanceId: string): CategoryWithChannels[] => [
-  {
-    id: "1",
-    name: "Text Channels",
-    instanceId: instanceId,
-    position: 0,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    channels: [
-      {
-        id: "1",
-        name: "general",
-        type: "text",
-        categoryId: "1",
-        instanceId: instanceId,
-        position: 0,
-        description: "General discussion about development and projects",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: "2",
-        name: "random",
-        type: "text",
-        categoryId: "1",
-        instanceId: instanceId,
-        position: 1,
-        description: "Random chat and off-topic discussions",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: "3",
-        name: "announcements",
-        type: "text",
-        categoryId: "1",
-        instanceId: instanceId,
-        position: 2,
-        description: "Important announcements and updates",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ],
-  },
-  {
-    id: "2",
-    name: "Voice Channels",
-    instanceId: instanceId,
-    position: 1,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    channels: [
-      {
-        id: "4",
-        name: "General",
-        type: "voice",
-        categoryId: "2",
-        instanceId: instanceId,
-        position: 0,
-        description: "",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: "5",
-        name: "Focus Room",
-        type: "voice",
-        categoryId: "2",
-        instanceId: instanceId,
-        position: 1,
-        description: "",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ],
-  },
-  {
-    id: "3",
-    name: "Project Channels",
-    instanceId: instanceId,
-    position: 2,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    channels: [
-      {
-        id: "6",
-        name: "frontend",
-        type: "text",
-        categoryId: "3",
-        instanceId: instanceId,
-        position: 0,
-        description: "Frontend development discussions",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: "7",
-        name: "backend",
-        type: "text",
-        categoryId: "3",
-        instanceId: instanceId,
-        position: 1,
-        description: "Backend and API development",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ],
-  },
-];
-
-// Placeholder hook for channels by instance
-export const useChannels = (instanceId?: string) => {
-  return useQuery({
-    queryKey: ["channels", instanceId],
-    queryFn: async (): Promise<CategoryWithChannels[]> => {
-      if (!instanceId) return [];
-
-      return createSampleCategories(instanceId);
-    },
-    enabled: !!instanceId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
-};
-
-// Hook for getting messages in a channel
-export const useChannelMessages = (channelId?: string) => {
-  return useQuery({
-    queryKey: ["messages", channelId],
-    queryFn: async () => {
-      if (!channelId) return [];
-
-      // Return messages for this channel
-      return SAMPLE_MESSAGES.filter((msg) => msg.channelId === channelId);
-    },
-    enabled: !!channelId,
-    staleTime: 1000 * 60 * 1, // 1 minute (messages are more dynamic)
-  });
-};
-
-// Placeholder hook for servers/instances
+// Hook for getting all servers/instances
 export const useServers = () => {
   return useQuery({
     queryKey: ["servers"],
     queryFn: async (): Promise<Instance[]> => {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      return SAMPLE_SERVERS;
+      try {
+        const instances = await apiClient.getInstances();
+        return instances;
+      } catch (error) {
+        console.error("Failed to fetch servers:", error);
+        throw new Error("Failed to fetch servers");
+      }
     },
     staleTime: 1000 * 60 * 5,
   });
 };
 
+// Hook for getting detailed instance info with categories and channels
 export const useInstanceDetails = (instanceId?: string) => {
   return useQuery({
     queryKey: ["instance", instanceId],
     queryFn: async (): Promise<InstanceWithDetails | null> => {
       if (!instanceId) return null;
-      await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const server = SAMPLE_SERVERS.find((s) => s.id === instanceId);
-      if (!server) return null;
+      try {
+        // Get instance basic info
+        const instances = await apiClient.getInstances();
+        const instance = instances.find((s) => s.id === instanceId);
+        if (!instance) return null;
 
-      return {
-        ...server,
-        categories: createSampleCategories(instanceId),
-      };
+        // Get categories for this instance
+        const categories = await apiClient.getCategoriesByInstance(instanceId);
+
+        // For each category, get its channels
+        const categoriesWithChannels: CategoryWithChannels[] =
+          await Promise.all(
+            categories.map(async (category): Promise<CategoryWithChannels> => {
+              try {
+                const channels = await apiClient.getChannelsByCategory(
+                  category.id,
+                );
+                return {
+                  ...category,
+                  channels: channels || [],
+                };
+              } catch (error) {
+                console.warn(
+                  `Failed to fetch channels for category ${category.id}:`,
+                  error,
+                );
+                return {
+                  ...category,
+                  channels: [],
+                };
+              }
+            }),
+          );
+
+        return {
+          ...instance,
+          categories: categoriesWithChannels,
+        };
+      } catch (error) {
+        console.error("Failed to fetch instance details:", error);
+        throw new Error("Failed to fetch instance details");
+      }
     },
     enabled: !!instanceId,
     staleTime: 1000 * 60 * 5,
@@ -339,21 +122,149 @@ export const useInstanceDetails = (instanceId?: string) => {
 export const useInstanceMembers = (instanceId?: string) => {
   return useQuery({
     queryKey: ["instance", instanceId, "members"],
-    queryFn: async (): Promise<User[]> => {
+    queryFn: async () => {
       if (!instanceId) return [];
-      await new Promise((resolve) => setTimeout(resolve, 100));
 
-      return SAMPLE_USERS.map((user, index) => ({
-        ...user,
-        roles: [
-          {
-            instanceId: instanceId,
-            role: index === 0 ? "admin" : index === 1 ? "mod" : "member",
-          },
-        ],
-      }));
+      try {
+        const backendUsers = await apiClient.getUsersByInstance(instanceId);
+        // Transform backend users to frontend format for compatibility
+        return backendUsers.map(transformBackendUserToFrontend);
+      } catch (error) {
+        console.error("Failed to fetch instance members:", error);
+        throw new Error("Failed to fetch instance members");
+      }
     },
     enabled: !!instanceId,
     staleTime: 1000 * 60 * 2,
+  });
+};
+
+// Hook for creating a new server/instance
+export const useCreateInstance = () => {
+  const queryClient = useQueryClient();
+  const { user, token } = useAuthStore();
+
+  return useMutation({
+    mutationFn: async (data: { name: string; icon?: string }) => {
+      if (!user || !token) {
+        throw new Error("Authentication required");
+      }
+
+      const requestData = {
+        ...data,
+        requestingUserId: user.id,
+        requestingUserToken: token,
+      };
+
+      try {
+        const instance = await apiClient.createInstance(requestData);
+        return instance;
+      } catch (error) {
+        console.error("Failed to create instance:", error);
+        throw new Error("Failed to create instance");
+      }
+    },
+    onSuccess: () => {
+      // Invalidate servers list to refetch
+      queryClient.invalidateQueries({ queryKey: ["servers"] });
+    },
+  });
+};
+
+// Hook for creating a new category
+export const useCreateCategory = () => {
+  const queryClient = useQueryClient();
+  const { user, token } = useAuthStore();
+
+  return useMutation({
+    mutationFn: async (data: {
+      name: string;
+      instanceId?: string;
+      position: number;
+    }) => {
+      if (!user || !token) {
+        throw new Error("Authentication required");
+      }
+
+      const requestData = {
+        ...data,
+        admin: user.admin,
+        requestingUserId: user.id,
+        requestingUserToken: token,
+      };
+
+      try {
+        const category = await apiClient.createCategory(requestData);
+        return category;
+      } catch (error) {
+        console.error("Failed to create category:", error);
+        throw new Error("Failed to create category");
+      }
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate instance details to refetch categories
+      if (variables.instanceId) {
+        queryClient.invalidateQueries({
+          queryKey: ["instance", variables.instanceId],
+        });
+      }
+    },
+  });
+};
+
+// Hook for creating a new channel
+export const useCreateChannel = () => {
+  const queryClient = useQueryClient();
+  const { user, token } = useAuthStore();
+
+  return useMutation({
+    mutationFn: async (data: {
+      type: "text" | "voice";
+      name: string;
+      description: string;
+      categoryId?: string;
+    }) => {
+      if (!user || !token) {
+        throw new Error("Authentication required");
+      }
+
+      const requestData = {
+        ...data,
+        admin: user.admin,
+        requestingUserId: user.id,
+        requestingUserToken: token,
+      };
+
+      try {
+        const channel = await apiClient.createChannel(requestData);
+        return channel;
+      } catch (error) {
+        console.error("Failed to create channel:", error);
+        throw new Error("Failed to create channel");
+      }
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate related queries
+      if (variables.categoryId) {
+        // Find the instance this category belongs to and invalidate it
+        queryClient.invalidateQueries({
+          queryKey: ["instance"],
+        });
+      }
+    },
+  });
+};
+
+// Placeholder hook for channels by instance (for backward compatibility)
+export const useChannels = (instanceId?: string) => {
+  const { data: instance } = useInstanceDetails(instanceId);
+
+  return useQuery({
+    queryKey: ["channels", instanceId],
+    queryFn: async (): Promise<CategoryWithChannels[]> => {
+      return instance?.categories || [];
+    },
+    enabled: !!instanceId && !!instance,
+    staleTime: 1000 * 60 * 5,
   });
 };

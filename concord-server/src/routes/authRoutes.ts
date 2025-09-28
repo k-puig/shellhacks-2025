@@ -3,6 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 import { describeRoute, resolver } from "hono-openapi";
 import {
   getUserCredentials,
+  getUserId,
   getUserInformation,
 } from "../services/userService";
 import shaHash from "../helper/hashing";
@@ -45,6 +46,7 @@ authRoutes.post(
   async (c) => {
     try {
       const { username, password } = await c.req.json();
+      console.log(c.req.json);
 
       // Find user by username
       const user = await prisma.user.findFirst({
@@ -55,21 +57,29 @@ authRoutes.post(
         return c.json({ error: "Invalid username or password" }, 401);
       }
 
-      // Get user credentials
-      const userCredentials = await getUserCredentials(user.id);
+      // get userId
+      const userIdResult = await getUserId(username);
+      if (!userIdResult) {
+        return c.json({ error: "Invalid username or password" }, 401);
+      }
+
+      const userId = userIdResult.userId;
+
+      // get user creds
+      const userCredentials = await getUserCredentials(userId);
       if (!userCredentials) {
         return c.json({ error: "Invalid username or password" }, 401);
       }
 
-      // Hash
-      // const hashedPassword = shaHash(password, user.id);
+      // hash the provided password with user ID as salt
+      const hashedPassword = shaHash(password, userId);
 
-      // Verify password
-      if (password !== userCredentials.password) {
+      // verify password
+      if (hashedPassword !== userCredentials.password) {
         return c.json({ error: "Invalid username or password" }, 401);
       }
 
-      // Generate new token
+      // generate new token
       const token = crypto.randomUUID();
 
       // Update user's token in database
@@ -78,7 +88,7 @@ authRoutes.post(
         data: { token: token },
       });
 
-      // Get full user information
+      // get full user information
       const userInfo = await getUserInformation(user.id);
       if (!userInfo) {
         return c.json({ error: "Failed to get user information" }, 500);
